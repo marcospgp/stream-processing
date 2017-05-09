@@ -6,7 +6,7 @@
 /**
  * Lê uma linha até ao tamanho máximo maxBytes
  */
-ssize_t readln (int fd, char* buffer, size_t maxBytes) {
+ssize_t readLine(int fd, char* buffer, long maxBytes) {
 
 	long bytesRead = 0;
 	ssize_t i;

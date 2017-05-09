@@ -29,7 +29,7 @@ long getIndexOfElement(char* string, long n) {
 	return -1;
 }
 
-int getElementValue(char* string, long n, char* buffer, long bufferSize) {
+long getElementValue(char* string, long n, char* buffer, long bufferSize) {
 
 	long i = getIndexOfElement(string, n);
 

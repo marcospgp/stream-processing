@@ -1,5 +1,5 @@
-#ifndef READLINE_H
-#define READLINE_H
+#ifndef GLOBALS_H
+#define GLOBALS_H
 
 #define PIPE_BUF 1024
 
@@ -19,6 +19,6 @@ long getIndexOfElement(char* string, long n);
  *     getElementValue("elemento1:elemento2:elemento3:elemento4", 3, buffer);
  * Retorna 9 e buffer == "elemento3"
  */
-int getElementValue(char* string, long n, char* buffer, long bufferSize);
+long getElementValue(char* string, long n, char* buffer, long bufferSize);
 
 #endif
