@@ -8,7 +8,7 @@
  */
 ssize_t readln (int fd, char* buffer, size_t maxBytes) {
 
-	long bytesread = 0;
+	long bytesRead = 0;
 	ssize_t i;
 	char c;
 
@@ -16,8 +16,8 @@ ssize_t readln (int fd, char* buffer, size_t maxBytes) {
 		i = read(fd, &c, 1);
 
 		if (i > 0) {
-			buffer[bytesread] = c;
-			bytesread++;
+			buffer[bytesRead] = c;
+			bytesRead++;
 		} else if (i < 0) {
 			buffer[bytesRead] = '\0';
 			return i;
@@ -25,10 +25,10 @@ ssize_t readln (int fd, char* buffer, size_t maxBytes) {
 			return i;
 		}
 
-	} while ( i > 0 && bytesread < maxBytes && c != '\n');
+	} while ( i > 0 && bytesRead < maxBytes && c != '\n');
 
-	buffer[bytesread] = '\0';
+	buffer[bytesRead] = '\0';
 
 	// Devolver o numero de bytes lidos
-	return bytesread;
+	return bytesRead;
 }
