@@ -16,15 +16,21 @@ int close(int fildes); */
 int main (int argc, char **argv) {
 
 	char *input = argv[1];
-	char *minibuf = malloc(sizeof(char)*7);
+	char *minibuf = malloc(sizeof(char)*1024);
+	int n;
+	int i = 0;
+	
+	do {
+        n = read (0, &minibuf[i], 1);
+        i++;
+    } while (n > 0  && (minibuf[i-1] != '\n'));
 
-	int n = read(0, minibuf, 7);
-	strcat(minibuf,":");
-	strcat(minibuf, input);
+    strcpy(&minibuf[i-1],":");
+    strcat(minibuf,input);
+    strcat(minibuf,"\n");
 
 	write(1, minibuf, strlen(minibuf));
 
 	return 0;
 
 }
-
