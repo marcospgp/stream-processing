@@ -1,22 +1,41 @@
 CC = gcc
-CCFLAGS = -O2 -Wall -std=c11 -g `pkg-config --cflags libxml-2.0` `pkg-config --cflags glib-2.0`
-LIBS =  `pkg-config --libs libxml-2.0` `pkg-config --libs glib-2.0`
+CCFLAGS = -Wall -std=c11 -g
+LIBS =
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
+NAMES = $(SOURCES:.c=)
+INCLUDES = $(wildcard includes/*.c)
+INCLUDESOBJ = $(INCLUDES:.c=.o)
 TARGET = program
 
-all: $(TARGET)
+# http://stackoverflow.com/a/22735335/2037431
+.DEFAULT_GOAL := all
+
+# Esta regra recebe qualquer argumento e compila todos os .c dentro da pasta includes,
+# depois compila o argumento juntamente com todos os includes (mesmo os desnecessários)
+
+%: %.o $(INCLUDESOBJ)
+	$(CC) -o $@ $^ $(LIBS)
+
+# Esta regra compila todos os .c desta pasta juntamente com todos os ficheiros da pasta include,
+# mas nunca mistura dois .c desta pasta (porque supostamente todos os .c nesta pasta têm um main)
+
+all: $(NAMES)
+
+# Esta regra é a que usamos no projeto wikipedia-metadata-parser
 
 $(TARGET): $(OBJECTS)
 	$(CC) -o $@ $^ $(LIBS)
 
+# Regras auxiliares
+
 %.o: %.c %.h
-	$(CC) $(CCFLAGS) -c $< $(LIBS)
+	$(CC) $(CCFLAGS) -o $@ -c $< $(LIBS)
 
 %.o: %.c
-	$(CC) $(CCFLAGS) -c $< $(LIBS)
+	$(CC) $(CCFLAGS) -o $@ -c $< $(LIBS)
 
 clean:
-	rm -f *.o $(TARGET)
+	rm -f *.o *.stackdump *.exe $(TARGET)
 
-.PHONY: clean # The .PHONY rule keeps make from doing something with a file named clean
+.PHONY: all clean # The .PHONY rule keeps make from doing something with a file named all, clean, etc.
