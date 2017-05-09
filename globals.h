@@ -16,6 +16,7 @@ long getIndexOfElement(char* string, long n);
  * Retorna 0 se houve algum problema, número de bytes lidos se correu normalmente
  *
  * Exemplo:
+ *     getElementValue("elemento1:elemento2:elemento3:elemento4", 3, buffer);
  * Retorna 9 e buffer == "elemento3"
  */
 int getElementValue(char* string, long n, char* buffer, long bufferSize);
