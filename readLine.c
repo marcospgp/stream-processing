@@ -21,7 +21,10 @@ ssize_t readln (int fd, char* buffer, size_t maxBytes) {
 		} else if (i < 0) {
 			buffer[bytesRead] = '\0';
 			return i;
+		} else {
+			return i;
 		}
+
 	} while ( i > 0 && bytesread < maxBytes && c != '\n');
 
 	buffer[bytesread] = '\0';

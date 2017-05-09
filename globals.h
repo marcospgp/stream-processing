@@ -10,6 +10,6 @@
  *
  * Neste caso, o resultado de getIndexOfElement(string, 2) é 10
  */
-int getIndexOfElement(char* string, int n);
+long getIndexOfElement(char* string, long n);
 
 #endif
