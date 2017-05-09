@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <unistd.h> /* chamadas ao sistema: defs e decls essenciais */
-#include <fcntl.h> /* O_RDONLY, O_WRONLY, O_CREAT, O_* */
 #include <stdlib.h>
 #include <string.h>
+#include "globals.h"
+#include "readLine.h"
 
 /* int open(const char *path, int oflag [, mode]);
 ssize_t read(int fildes, void *buf, size_t nbyte);
@@ -16,15 +17,11 @@ int close(int fildes); */
 int main (int argc, char **argv) {
 
 	char *input = argv[1];
-	char *minibuf = malloc(sizeof(char)*1024);
-	int n;
-	int i = 0;
+	char *minibuf = malloc(PIPE_BUF);
 	
-	do {
-        n = read (0, &minibuf[i], 1);
-        i++;
-    } while (n > 0  && (minibuf[i-1] != '\n'));
+	readln(0, minibuf, PIPE_BUF);
 
+	int i = strlen(minibuf);
     strcpy(&minibuf[i-1],":");
     strcat(minibuf,input);
     strcat(minibuf,"\n");
