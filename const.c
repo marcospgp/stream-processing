@@ -1,7 +1,9 @@
 #include <stdio.h>
-#include <unistd.h> /* chamadas ao sistema: defs e decls essenciais */
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+
 #include "includes/globals.h"
 #include "includes/readLine.h"
 
@@ -16,18 +18,40 @@ int close(int fildes); */
 
 int main (int argc, char **argv) {
 
+	if (argc < 2) {
+		return EXIT_FAILURE;
+	}
+
 	char *input = argv[1];
 	char *minibuf = malloc(PIPE_BUF);
 
-	readLine(0, minibuf, PIPE_BUF);
+	ssize_t bufferSize = PIPE_BUF - 1 - strlen(input);
+	ssize_t i;
 
-	int i = strlen(minibuf);
-    strcpy(&minibuf[i-1],":");
-    strcat(minibuf,input);
-    strcat(minibuf,"\n");
+	while ( (i = readLine(0, minibuf, bufferSize)) > 0) {
 
-	write(1, minibuf, strlen(minibuf));
+		minibuf[i - 1] = ':';
+		minibuf[i] = '\0';
 
-	return 0;
+		strcat(minibuf, input);
 
+		ssize_t newLength = i + strlen(input);
+
+		minibuf[newLength] = '\n';
+		minibuf[newLength + 1] = '\0';
+
+		newLength++;
+
+		write(1, minibuf, newLength);
+	}
+
+	if (i < 0) {
+
+		fprintf(stderr, "(const) Error reading input: %s (read() returned %ld)\n", strerror(errno), i);
+		return EXIT_FAILURE;
+
+	} else {
+
+		return EXIT_SUCCESS;
+	}
 }
