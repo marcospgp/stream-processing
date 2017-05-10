@@ -25,7 +25,7 @@ int main (int argc, char **argv) {
 	char *input = argv[1];
 	char *minibuf = malloc(PIPE_BUF);
 
-	ssize_t bufferSize = PIPE_BUF - 1 - strlen(input);
+	ssize_t bufferSize = PIPE_BUF - 1 - strlen(input); // Só podemos ler enquanto couber o que queremos adicionar à linha
 	ssize_t i;
 
 	while ( (i = readLine(0, minibuf, bufferSize)) > 0) {

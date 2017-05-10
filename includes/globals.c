@@ -47,5 +47,7 @@ long getElementValue(char* string, long n, char* buffer, long bufferSize) {
 		counter++;
 	}
 
+	buffer[counter] = '\0';
+
 	return counter;
 }
