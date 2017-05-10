@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -8,18 +9,18 @@
 
 int main(int argc, char** argv) {
 
-	printf("%d\n", 1);
-
 	// Chamada com o formato "filter colunaA operador colunaB", exemplo: "filter 2 > 4"
 	// Operadores possíveis: =, >=, <=, >, <, !=
+
+	if (argc < 4) {
+		return EXIT_FAILURE;
+	}
 
 	char* end;
 
 	long columnA = strtol(argv[1], &end, 10);
-	char operator = argv[2][0];
+	char* operator = argv[2];
 	long columnB = strtol(argv[3], &end, 10);
-
-	printf("%d\n", 2);
 
 	// strtol error handling (strtol retorna 0 quando há um erro)
 	if ( (columnA == 0 || columnB == 0) && errno != 0 ) {
@@ -32,8 +33,6 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "(filter) Error reading arguments (column value < 1): %ld %ld\n", columnA, columnB);
 		return EXIT_FAILURE;
 	}
-
-	printf("%d\n", 3);
 
 	// Ler linhas do stdin
 
@@ -69,7 +68,48 @@ int main(int argc, char** argv) {
 
 		// Determinar operador a usar
 
-		printf("%ld %ld\n", columnAValueLong, columnBValueLong);
+		int echoLine = 0;
+
+		if (strcmp(operator, "<") == 0) {
+
+			if (columnAValueLong < columnBValueLong) {
+				echoLine = 1;
+			}
+
+		} else if (strcmp(operator, "<=") == 0) {
+
+			if (columnAValueLong < columnBValueLong) {
+				echoLine = 1;
+			}
+
+		} else if (strcmp(operator, ">") == 0) {
+
+			if (columnAValueLong > columnBValueLong) {
+				echoLine = 1;
+			}
+
+		} else if (strcmp(operator, ">=") == 0) {
+
+			if (columnAValueLong >= columnBValueLong) {
+				echoLine = 1;
+			}
+
+		} else if (strcmp(operator, "!=") == 0) {
+
+			if (columnAValueLong != columnBValueLong) {
+				echoLine = 1;
+			}
+
+		} else if (strcmp(operator, "=") == 0) {
+
+			if (columnAValueLong == columnBValueLong) {
+				echoLine = 1;
+			}
+		}
+
+		if (echoLine) {
+			write(1, buffer, i);
+		}
 	}
 
 	if (i < 0) {
