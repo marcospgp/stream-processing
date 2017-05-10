@@ -2,6 +2,7 @@
 #define GLOBALS_H
 
 #define PIPE_BUF 1024
+#define FIFO_NAME "papepopiripoperoapepraospeorjsomonobocopolotomonosocovodofogopotojosocolomonosozono"
 
 /* Retorna o indíce do caractere onde começa um elemento
  * numa string, assumindo que o formato da string é:
