@@ -8,7 +8,8 @@ node 7 filter 2 > 4
 node 8 tee warm-log.txt
 node 9 const 100
 node 10 filter 2 > 5
-node 11 tee log.txt
+node 11 spawn echo "shutdown -n"
+node 12 tee log.txt
 connect 1 2
 connect 2 3 5
 connect 3 4
