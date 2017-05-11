@@ -10,7 +10,7 @@
 int main(int argc, char** argv) {
 
 
-	// Chamada com o formato "window colunaA operador colunaB", exemplo: "window 4 avg 2"
+	// Chamada com o formato "window coluna operador linhas", exemplo: "window 4 avg 2"
 	// Operadores possíveis: avg, max, min, sum 
 
 	if (argc < 4) {
