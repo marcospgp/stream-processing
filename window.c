@@ -4,8 +4,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include "globals.h"
-#include "readLine.h"
+#include "includes/globals.h"
+#include "includes/readLine.h"
 
 int main(int argc, char** argv) {
 
@@ -126,6 +126,7 @@ int main(int argc, char** argv) {
 		if (j == maxsize) {
 			array[0] = columnAValueLong;
 			j = 0;
+			j++;
 		}
 		else {
 			array[j] = columnAValueLong;
