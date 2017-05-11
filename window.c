@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 		if (flag == 0) { 
 			if (strcmp(operator, "avg") == 0) {
 
-				for(int i = 0; array[i]!='\0'; i++) {
+				for(int i = 0; i < maxsize; i++) {
 					sum += array[i];
 				}
 					avg = sum / maxsize;
@@ -89,21 +89,21 @@ int main(int argc, char** argv) {
 
 			} else if (strcmp(operator, "max") == 0) {
 
-				for(int i = 0; array[i] != '\0'; i++) {
+				for(int i = 0; i < maxsize; i++) {
 					if (array[i] > larger) larger = array[i];
 				}
 				sprintf(output,"%lu", larger);
 
 			} else if (strcmp(operator, "min") == 0) {
 
-				for(int i = 0; array[i] != '\0'; i++) {
+				for(int i = 0; i < maxsize; i++) {
 					if (array[i] < smaller) smaller = array[i];
 				}
 				sprintf(output,"%lu", smaller);
 
 			} else if (strcmp(operator, "sum") == 0) {
 
-				for(int i = 0; array[i]!='\0'; i++){
+				for(int i = 0; i < maxsize; i++){
 					sum += array[i];
 				}
 				sprintf(output,"%lu", sum);
