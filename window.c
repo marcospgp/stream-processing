@@ -97,7 +97,6 @@ int main(int argc, char** argv) {
 			} else if (strcmp(operator, "min") == 0) {
 
 				for(int i = 0; array[i] != '\0'; i++) {
-					// printf("%lu\n",array[i]);
 					if (array[i] < smaller) smaller = array[i];
 				}
 				sprintf(output,"%lu", smaller);
