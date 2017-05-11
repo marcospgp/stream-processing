@@ -3,15 +3,16 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 
-#include "globals.h"
-#include "readLine.h"
+#include "includes/globals.h"
+#include "includes/readLine.h"
 
 int main(int argc, char** argv) {
 
 
 	// Chamada com o formato "window colunaA operador colunaB", exemplo: "window 4 avg 2"
-	// Operadores possíveis: avg, max, min, sum 
+	// Operadores possíveis: avg, max, min, sum
 
 	if (argc < 4) {
 		return EXIT_FAILURE;
@@ -78,7 +79,7 @@ int main(int argc, char** argv) {
 		long smaller = +9223372036854775807;
 		long firstuse = 0;
 
-		if (flag == 0) { 
+		if (flag == 0) {
 			if (strcmp(operator, "avg") == 0) {
 
 				for(int i = 0; array[i]!='\0'; i++) {
@@ -114,14 +115,14 @@ int main(int argc, char** argv) {
 				firstvalue = columnAValueLong;
 				sprintf(output,"%lu", firstuse);
 				flag = 2;
-			} 
+			}
 			else {
 				sprintf(output,"%lu", firstvalue);
 				flag = 0;
 			}
 
 		}
-		
+
 
 		if (j == maxsize) {
 			array[0] = columnAValueLong;
@@ -132,7 +133,7 @@ int main(int argc, char** argv) {
 			j++;
 		}
 
-		
+
 		buffer[i - 1] = ':';
 		buffer[i] = '\0';
 

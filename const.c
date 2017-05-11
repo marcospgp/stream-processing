@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "includes/globals.h"
 #include "includes/readLine.h"
@@ -47,7 +48,7 @@ int main (int argc, char **argv) {
 
 	if (i < 0) {
 
-		fprintf(stderr, "(const) Error reading input: %s (read() returned %ld)\n", strerror(errno), i);
+		fprintf(stderr, "(const) Error reading input: %s (readLine() returned %ld)\n", strerror(errno), i);
 		return EXIT_FAILURE;
 
 	} else {

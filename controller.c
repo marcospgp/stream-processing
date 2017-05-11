@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <string.h>
+#include <errno.h>
 
 #include "includes/globals.h"
 #include "includes/readLine.h"
@@ -14,9 +16,7 @@ ssize_t read(int fildes, void *buf, size_t nbyte);
 ssize_t write(int fildes, const void *buf, size_t nbyte);
 int close(int fildes); */
 
-int createNamedPipe(int pipeId) {
-
-	int fd;
+static int createNamedPipe(int pipeId) {
 
 	// Converter pipeId para string
 	char pipeIdStr[256];
@@ -30,22 +30,45 @@ int createNamedPipe(int pipeId) {
 		exit(EXIT_FAILURE);
 	}
 
-	fd = open(myfifo, O_WRONLY);
+	int fd = open(pipeIdStr, O_WRONLY);
 	write(fd, "Hi", sizeof("Hi"));
 	close(fd);
 
-	/* remove the FIFO */
-	unlink(myfifo);
+	return 0;
+}
+
+static int closeNamedPipe(int pipeId) {
+
+	// Converter pipeId para string
+	char pipeIdStr[256];
+	sprintf(pipeIdStr, "%d", pipeId);
+
+	unlink(pipeIdStr);
 
 	return 0;
-
 }
 
-int closeNamedPipe(int pipeId) {
+static int createNode(int nodeId, char* cmd, char** args) {
 
+	// Criar um filho para correr o nó
+
+	pid_t pid = fork();
+
+	if (pid == 0) {
+
+		// Criar named pipe para este nó
+		//createNamedPipe(nodeId, )
+
+		execv(cmd, args);
+
+		// Se o execv falhou, terminar com código 127
+		exit(127);
+	}
+
+	return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
 
 	/* Comandos que o controlador pode receber (através do ficheiro de configuração ou do stdin):
 	 * node <id> <cmd> <args...>
@@ -62,25 +85,75 @@ int main(int argc, char **argv) {
 	// O controlador pode receber um argumento que é o caminho de um ficheiro de configuração
 	if (argc > 1) {
 
-		int cfgd = fopen(argv[1], "r");
+		int fd = open(argv[1], O_RDONLY);
 
-		if (cfgd) {
+		if (fd < 0) {
+
+			printf("Could not find configuration file. Skipping (open() returned %d)\n", fd);
+
+		} else {
 
 			char buffer[PIPE_BUF];
 
-		    while ((i = readLine(cfgd, buffer, (long) PIPE_BUF)) > 0) {
+			int i;
+			while ((i = readLine(fd, buffer, (long) PIPE_BUF)) > 0) {
 
-		    	// TODO - execute config lines
-		    	printf("Reading configuration line\n\n%s\n\n", buffer);
-		    }
+				printf("Reading configuration line\n\n%s\n\n", buffer);
 
-			fclose(file);
+				char** tokens = split(buffer, ' ');
 
-		} else {
-			fprintf(stderr, "(controller) Error opening configuration file\n");
-			return EXIT_FAILURE;
+				// Get cmd
+				char* cmd = tokens[0];
+
+				// Get id
+				int id = (int) strtol(tokens[1], (char**) NULL, 10);
+
+				// Get argumentos restantes
+				char** args = &tokens[2];
+
+				printf("cmd: %s\n", cmd);
+
+				printf("id: %d\n", id);
+
+				int j;
+				for (j = 0; *(args + j); j++) {
+					printf("arg: %s\n", args[j]);
+				}
+
+				return 0;
+
+				// Switch cmd
+
+				if (strcmp(cmd, "node") == 0) {
+
+					createNode(id, cmd, args);
+
+				} else if (strcmp(cmd, "connect") == 0) {
+
+					// TODO - connect
+
+				} else if (strcmp(cmd, "disconnect") == 0) {
+
+					// TODO - disconnect
+
+				} else if (strcmp(cmd, "inject") == 0) {
+
+					// TODO - inject
+
+				} else {
+
+					fprintf(stderr, "(controller) Skipping unknown command in configuration file (%s)\n", cmd);
+				}
+			}
+
+			close(fd);
+
+			if (i < 0) {
+
+				fprintf(stderr, "(controller) Error reading configuration line: %s (readLine() returned %d)\n", strerror(errno), i);
+				return EXIT_FAILURE;
+			}
+
 		}
 	}
-
-
 }

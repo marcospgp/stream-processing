@@ -1,8 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define PIPE_BUF 1024
-#define FIFO_NAME "papepopiripoperoapepraospeorjsomonobocopolotomonosocovodofogopotojosocolomonosozono"
+// Duplica uma string
+char* duplicateString(char *org);
 
 /* Retorna o indíce do caractere onde começa um elemento
  * numa string, assumindo que o formato da string é:
@@ -21,5 +21,22 @@ long getIndexOfElement(char* string, long n);
  * Retorna 9 e buffer == "elemento3"
  */
 long getElementValue(char* string, long n, char* buffer, long bufferSize);
+
+// Array dinâmico
+
+#define INITIAL_ARRAY_SIZE 2014
+
+typedef struct {
+	int *array;
+	size_t used;
+	size_t size;
+} Array;
+
+void initArray(Array *a);
+void insertArray(Array *a, int element);
+void freeArray(Array *a);
+
+// Divide uma string em várias com base num delimitador. O array resultante termina em NULL
+char** split(char* a_str, const char a_delim);
 
 #endif
