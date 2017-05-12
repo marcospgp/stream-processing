@@ -1,6 +1,13 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#define WINDOWS_MODE 1
+#define FIFO_PREFIX "sofifo/"
+
+char* getWritePipeStr(int pipeId);
+
+char* getReadPipeStr(int pipeId);
+
 // Duplica uma string
 char* duplicateString(char *org);
 

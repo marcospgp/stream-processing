@@ -18,34 +18,42 @@ int close(int fildes); */
 
 static int createNamedPipe(int pipeId) {
 
-	// Converter pipeId para string
-	char pipeIdStr[256];
-	sprintf(pipeIdStr, "%d", pipeId);
+	char* writePipe = getWritePipeStr(pipeId);
+	char* readPipe = getReadPipeStr(pipeId);
 
-	// Criar a named pipe
-	int result = mkfifo(pipeIdStr, 0666);
-
-	if (result != 0) {
-		fprintf(stderr, "(controller) Error creating named pipe (mkfifo() returned %d)\n", result);
-		exit(EXIT_FAILURE);
+	// Verificar se a named pipe já existe
+	if (access(writePipe, F_OK) == 0 || access(readPipe, F_OK) == 0) {
+		fprintf(stderr, "(controller) Trying to create a FIFO pair that already exists\n");
 	}
 
-	int fd = open(pipeIdStr, O_WRONLY);
-	write(fd, "Hi", sizeof("Hi"));
-	close(fd);
+	// Criar a named pipe
 
-	return 0;
+	printf("(controller) Trying to create pipes %s and %s\n", writePipe, readPipe);
+
+	int resultW = mkfifo(writePipe, 0777);
+	int resultR = mkfifo(readPipe, 0777);
+
+	if (resultW != 0 || resultR != 0) {
+		fprintf(stderr, "(controller) Error creating named pipe (mkfifo() returned %d (write) %d (read))\n", resultW, resultR);
+		return 0;
+	}
+
+	return 1;
 }
 
-static int closeNamedPipe(int pipeId) {
+static void closeNamedPipe(int pipeId) {
 
-	// Converter pipeId para string
-	char pipeIdStr[256];
-	sprintf(pipeIdStr, "%d", pipeId);
+	char* writePipe = getWritePipeStr(pipeId);
+	char* readPipe = getReadPipeStr(pipeId);
 
-	unlink(pipeIdStr);
+	if (access(writePipe, F_OK) == -1 || access(readPipe, F_OK) == -1) {
+		return;
+	}
 
-	return 0;
+	unlink(writePipe);
+	unlink(readPipe);
+
+	return;
 }
 
 static int createNode(int nodeId, char* cmd, char** args) {
@@ -57,9 +65,41 @@ static int createNode(int nodeId, char* cmd, char** args) {
 	if (pid == 0) {
 
 		// Criar named pipe para este nó
-		//createNamedPipe(nodeId, )
+		if (!createNamedPipe(nodeId)) {
+			fprintf(stderr, "(controller) Failed to create named pipe\n");
+			return EXIT_FAILURE;
+		}
+
+		// Converter pipeId para string
+		char* writePipe = getWritePipeStr(nodeId);
+		char* readPipe = getReadPipeStr(nodeId);
+
+		// Trocar stdout e stdin deste processo por named pipes
+
+		int resW = open(writePipe, O_WRONLY);
+		int resR = open(readPipe, O_RDONLY);
+
+		dup2(resR, 0);
+		dup2(resW, 1);
+
+		// Adicionar sufixo .exe quando estivermos a trabalhar em windows
+		if (WINDOWS_MODE && (
+			strcmp(cmd, "filter") == 0 ||
+			strcmp(cmd, "const")  == 0 ||
+			strcmp(cmd, "window") == 0 ||
+			strcmp(cmd, "spawn")  == 0
+		)) {
+			cmd = strcat(cmd, ".exe");
+		}
 
 		execv(cmd, args);
+
+		fprintf(stderr, "(controller) Node creation failed (execv(%s, [...]))\n", cmd);
+
+		close(resW);
+		close(resR);
+
+		closeNamedPipe(nodeId);
 
 		// Se o execv falhou, terminar com código 127
 		exit(127);
@@ -98,7 +138,7 @@ int main(int argc, char** argv) {
 			int i;
 			while ((i = readLine(fd, buffer, (long) PIPE_BUF)) > 0) {
 
-				printf("Reading configuration line\n\n%s\n\n", buffer);
+				printf("Reading configuration line: %s", buffer);
 
 				char** tokens = split(buffer, ' ');
 
@@ -111,26 +151,49 @@ int main(int argc, char** argv) {
 				// Get argumentos restantes
 				char** args = &tokens[2];
 
-				printf("cmd: %s\n", cmd);
-
-				printf("id: %d\n", id);
-
-				int j;
-				for (j = 0; *(args + j); j++) {
-					printf("arg: %s\n", args[j]);
-				}
-
-				return 0;
-
 				// Switch cmd
 
 				if (strcmp(cmd, "node") == 0) {
 
-					createNode(id, cmd, args);
+					createNode(id, tokens[2], &tokens[3]);
 
 				} else if (strcmp(cmd, "connect") == 0) {
 
-					// TODO - connect
+					// Ir buscar a pipe onde o nó escreve
+					char* fifoFrom = getWritePipeStr(id);
+
+					// Ir buscar as pipes onde os outros nós vão ler
+
+					int j = 0;
+					while (args[j] != NULL) {
+
+						int nodeId = (int) strtol(args[j], (char**) NULL, 10);
+
+						char* fifoTo = getReadPipeStr(nodeId);
+
+						int pid = fork();
+
+						if (pid == 0) {
+
+							char* argsToPass[] = {fifoFrom, fifoTo};
+
+							if (WINDOWS_MODE) {
+
+								execv("connect.exe", argsToPass);
+
+								fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s]))\n", "connect.exe", fifoFrom, fifoTo);
+
+							} else {
+
+								execv("connect", argsToPass);
+
+								fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s]))\n", "connect", fifoFrom, fifoTo);
+							}
+
+							// Se o execv falhou, terminar com código 127
+							exit(127);
+						}
+					}
 
 				} else if (strcmp(cmd, "disconnect") == 0) {
 
@@ -153,7 +216,6 @@ int main(int argc, char** argv) {
 				fprintf(stderr, "(controller) Error reading configuration line: %s (readLine() returned %d)\n", strerror(errno), i);
 				return EXIT_FAILURE;
 			}
-
 		}
 	}
 }

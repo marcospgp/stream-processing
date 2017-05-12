@@ -7,6 +7,23 @@
 
 #include "globals.h"
 
+char* getWritePipeStr(int pipeId) {
+
+	char pipeIdStr[256];
+	sprintf(pipeIdStr, "%s%d%s", FIFO_PREFIX, pipeId, "W");
+
+	return pipeIdStr;
+}
+
+char* getReadPipeStr(int pipeId) {
+
+	char pipeIdStr[256];
+	sprintf(pipeIdStr, "%s%d%s", FIFO_PREFIX, pipeId, "R");
+
+	return pipeIdStr;
+}
+
+
 // String to long
 // Retorna 1 se a conversão foi bem sucedida, caso contrário retorna 0
 int parseLong(const char* str, long* val) {
