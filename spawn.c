@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "includes/globals.h"
 #include "includes/readLine.h"
@@ -13,24 +16,33 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	/* array para onde se vai ler os argumentos que tem $ na frente */
 	long input[128];
+
 	char* end;
 	long read;
-	int* positions = malloc(sizeof(int)*1);
-	int counter = 0;
 
-	for (int i = 1, j = 0; i < argc; i++, j++) {
+	/* array que guarda o i de argv[i] onde os $ vao sendo encontrados */
+	int* positions = malloc(sizeof(int)*1);
+
+	/* conta o numero de argumentos que leu */
+	int nread = 0;
+
+
+	/* ciclo que que le os argumentos com $ na frente e os passa para um array input. O i do argv[i]
+	fica guardado no array positions */
+
+	for (int i = 1; i < argc; i++) {
 	 	if (argv[i][0] == '$') {
 	 		read = strtol(&(argv[i][1]), &end, 10);
 	 		if (read == 0 && errno == 0) {
 				fprintf(stderr, "Error reading arguments: %s\n", strerror(errno));
-				j--;
 			}
 			else {
-	 			input[j] = read;
-	 			counter++;
-	 			*(positions+j) = i;
-	 			realloc(positions,sizeof(int)*1);
+	 			input[nread] = read;
+	 			*(positions+nread) = i;
+	 			nread++;
+	 			positions = realloc(positions,sizeof(int)*1);
 	 		}
 	 	}
 	 }
@@ -39,18 +51,22 @@ int main(int argc, char** argv) {
 
 	char buffer[PIPE_BUF];
 	char* columnAValue = malloc(PIPE_BUF);
-
 	ssize_t i;
+
 	while ( (i = readLine(0, buffer, (long) PIPE_BUF)) > 0) {
 
-		// Obter valores das colunas
-		for(int d = 0; d < counter; d++) {
-			if (getElementValue(buffer, input[d], &columnAValue[d], (long) PIPE_BUF) < 1) {
+		int counter = 0;
+
+		// Ciclo que obtem os valores das colunas que o argumento da funcao manda ler
+
+		for(int i = 0; i < nread; i++) {
+			if (getElementValue(buffer, input[i], &columnAValue[i], (long) PIPE_BUF) < 1) {
 				fprintf(stderr, "(filter) Error obtaining column values (getElementValue returned 0)");
 				return EXIT_FAILURE;
 			}
 			else {
-				strcpy(argv[*(positions+d)], &columnAValue[d]);
+				strcpy(argv[*(positions+counter)], &columnAValue[i]); // copia o valor que esta na coluna para o argv
+				counter++;
 			}
 		}
 
@@ -58,15 +74,19 @@ int main(int argc, char** argv) {
 
 		int exitStatus;
 		int result;
-		pid_t childId = fork();
+		pid_t childId = fork(); // cria 1 processo filho
 
 		if (childId == 0) {
-			execvp(argv[1], &argv[1]);
+			execvp(argv[1], &argv[1]); // executa os argumentos ja manipulados
+			exit(0);
 		}
 
 		while (wait(&exitStatus) > 0) {
 			result = WEXITSTATUS(exitStatus);
 		}
+
+
+		/* coloca o resultado do exec, p.e. --> input: a:3:x:2, output a:3:x:2:0 */
 
 		sprintf(output, "%d", result);
 
@@ -96,4 +116,5 @@ int main(int argc, char** argv) {
 
 		return EXIT_SUCCESS;
 	}
+	
 }
