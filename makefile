@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -O2 -Wall -std=c11 -g
+CCFLAGS = -O2 -Wall -g
 LIBS =
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
@@ -9,14 +9,14 @@ INCLUDESOBJ = $(INCLUDES:.c=.o)
 
 all: $(TARGETS)
 
-$(TARGETS): $(OBJECTS)
+$(TARGETS): $(OBJECTS) $(INCLUDESOBJ)
 	$(CC) -o $@ $@.o $(INCLUDESOBJ) $(LIBS)
 
 %.o: %.c %.h
-	$(CC) $(CCFLAGS) -c $< $(LIBS)
+	$(CC) $(CCFLAGS) -c $< -o $@ $(LIBS)
 
 %.o: %.c
-	$(CC) $(CCFLAGS) -c $< $(LIBS)
+	$(CC) $(CCFLAGS) -c $< -o $@ $(LIBS)
 
 clean:
 	rm -f *.o *.stackdump *.exe
