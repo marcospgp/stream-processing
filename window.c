@@ -5,6 +5,9 @@
 #include <string.h>
 #include <limits.h>
 
+#include <ctype.h>
+
+
 #include "includes/globals.h"
 #include "includes/readLine.h"
 
@@ -25,6 +28,9 @@ int main(int argc, char** argv) {
 
 	// Cria um array com o número de posições dado pelo 2º argumento da funcao
 	long array[columnB];
+
+	// Poe o array a zeros
+	memset(array,0,sizeof(array));
 
 	// strtol error handling (strtol retorna 0 quando há um erro)
 	if ( (columnA == 0 || columnB == 0) && errno != 0 ) {
@@ -49,6 +55,7 @@ int main(int argc, char** argv) {
 	char *output = malloc(PIPE_BUF);
 	int flag = 1;
 	long firstvalue;
+	int counter = 0;
 
 	while ( (i = readLine(0, buffer, (long) PIPE_BUF)) > 0) {
 
@@ -96,7 +103,7 @@ int main(int argc, char** argv) {
 
 			} else if (strcmp(operator, "min") == 0) {
 
-				for(int i = 0; i < maxsize; i++) {
+				for(int i = 0; i < counter; i++) {
 					if (array[i] < smaller) smaller = array[i];
 				}
 				sprintf(output,"%lu", smaller);
@@ -130,6 +137,7 @@ int main(int argc, char** argv) {
 		else {
 			array[j] = columnAValueLong;
 			j++;
+			if (counter != 4) counter++;
 		}
 
 
