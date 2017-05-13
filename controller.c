@@ -477,6 +477,45 @@ static int removeAllInjectPipes() {
 	return 0;
 }
 
+void parseCommand(char* cmdLine) {
+
+	char** tokens = split(cmdLine, ' ');
+
+	// Get cmd
+	char* cmd = tokens[0];
+
+	// Get id
+	int id = (int) strtol(tokens[1], (char**) NULL, 10);
+
+	// Get argumentos restantes
+	char** args = &tokens[2];
+
+	// Switch cmd
+
+	if (strcmp(cmd, "node") == 0) {
+
+		createNode(id, tokens[2], &tokens[3]);
+
+	} else if (strcmp(cmd, "connect") == 0) {
+
+		createConnection(id, args);
+
+	} else if (strcmp(cmd, "disconnect") == 0) {
+
+		int to = (int) strtol(args[0], (char**) NULL, 10);
+
+		removeConnection(id, to);
+
+	} else if (strcmp(cmd, "inject") == 0) {
+
+		createInject(id, tokens[2], &tokens[3]);
+
+	} else {
+
+		fprintf(stderr, "Skipping unknown command in configuration file (%s)\n", cmd);
+	}
+}
+
 int main(int argc, char** argv) {
 
 	/* Comandos que o controlador pode receber (através do ficheiro de configuração ou do stdin):
@@ -515,41 +554,7 @@ int main(int argc, char** argv) {
 
 				printf("Reading configuration line: %s", buffer);
 
-				char** tokens = split(buffer, ' ');
-
-				// Get cmd
-				char* cmd = tokens[0];
-
-				// Get id
-				int id = (int) strtol(tokens[1], (char**) NULL, 10);
-
-				// Get argumentos restantes
-				char** args = &tokens[2];
-
-				// Switch cmd
-
-				if (strcmp(cmd, "node") == 0) {
-
-					createNode(id, tokens[2], &tokens[3]);
-
-				} else if (strcmp(cmd, "connect") == 0) {
-
-					createConnection(id, args);
-
-				} else if (strcmp(cmd, "disconnect") == 0) {
-
-					int to = (int) strtol(args[0], (char**) NULL, 10);
-
-					removeConnection(id, to);
-
-				} else if (strcmp(cmd, "inject") == 0) {
-
-					createInject(id, tokens[2], &tokens[3]);
-
-				} else {
-
-					fprintf(stderr, "Skipping unknown command in configuration file (%s)\n", cmd);
-				}
+				parseCommand(buffer);
 			}
 
 			close(fd);
@@ -574,6 +579,10 @@ int main(int argc, char** argv) {
 			removeAllNodes();
 			removeAllInjectConnections();
 			removeAllInjectPipes();
+
+		} else {
+
+			parseCommand(buffer2);
 		}
 	}
 
