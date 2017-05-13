@@ -1,4 +1,4 @@
-#ifndef GLOBALS_H
+﻿#ifndef GLOBALS_H
 #define GLOBALS_H
 
 #define WINDOWS_MODE 0
@@ -9,6 +9,8 @@
 void getWritePipeStr(int pipeId, char* buffer);
 
 void getReadPipeStr(int pipeId, char* buffer);
+
+void getInjectPipeStr(int pipeId, char* buffer);
 
 // Duplica uma string
 char* duplicateString(char *org);

@@ -17,6 +17,10 @@ void getReadPipeStr(int pipeId, char* buffer) {
 	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "R");
 }
 
+void getInjectPipeStr(int pipeId, char* buffer) {
+
+	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "I");
+}
 
 // String to long
 // Retorna 1 se a conversão foi bem sucedida, caso contrário retorna 0
