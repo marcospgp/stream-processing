@@ -20,34 +20,6 @@ int close(int fildes); */
 static int nodes[MAX_NODES];                  // nodes[nodeId] = processID
 static int connections[MAX_NODES][MAX_NODES]; // connections[from][to] = processID
 
-static int createNamedPipePair(int pipeId) {
-
-	char writePipe[256];
-	char readPipe[256];
-
-	getWritePipeStr(pipeId, writePipe);
-	getReadPipeStr(pipeId, readPipe);
-
-	// Verificar se a named pipe já existe
-	if (access(writePipe, F_OK) == 0 || access(readPipe, F_OK) == 0) {
-		fprintf(stderr, "(controller) Trying to create a FIFO pair that already exists\n");
-	}
-
-	// Criar a named pipe
-
-	printf("(controller) Trying to create pipes %s and %s\n", writePipe, readPipe);
-
-	int resultW = mkfifo(writePipe, 0666);
-	int resultR = mkfifo(readPipe, 0666);
-
-	if (resultW != 0 || resultR != 0) {
-		fprintf(stderr, "(controller) Error creating named pipe for node %d (mkfifo() returned %d (write) %d (read)) Error message: %s\n", pipeId, resultW, resultR, strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
 static void closeNamedPipePair(int pipeId) {
 
 	char writePipe[256];
@@ -66,9 +38,39 @@ static void closeNamedPipePair(int pipeId) {
 	return;
 }
 
+static int createNamedPipePair(int pipeId) {
+
+	char writePipe[256];
+	char readPipe[256];
+
+	getWritePipeStr(pipeId, writePipe);
+	getReadPipeStr(pipeId, readPipe);
+
+	// Verificar se a named pipe já existe
+	if (access(writePipe, F_OK) == 0 || access(readPipe, F_OK) == 0) {
+		fprintf(stderr, "Creating a FIFO pair that already exists, going to delete first\n");
+
+		closeNamedPipePair(pipeId);
+	}
+
+	// Criar a named pipe
+
+	printf("Creating pipes %s and %s\n", writePipe, readPipe);
+
+	int resultW = mkfifo(writePipe, 0666);
+	int resultR = mkfifo(readPipe, 0666);
+
+	if (resultW != 0 || resultR != 0) {
+		fprintf(stderr, "Error creating named pipe for node %d (mkfifo() returned %d (write) %d (read)) Error message: %s\n", pipeId, resultW, resultR, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
 static int createNode(int nodeId, char* cmd, char** args) {
 
-	printf("Trying to create node %d with cmd %s and args ", nodeId, cmd);
+	printf("Creating node %d with cmd %s and args ", nodeId, cmd);
 
 	int i;
 	for (i = 0; args[i] != NULL; i++) {
@@ -89,7 +91,7 @@ static int createNode(int nodeId, char* cmd, char** args) {
 
 		// Criar named pipe para este nó
 		if (createNamedPipePair(nodeId) != 0) {
-			fprintf(stderr, "(controller) Failed to create named pipe\n");
+			fprintf(stderr, "Failed to create named pipe\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -122,7 +124,16 @@ static int createNode(int nodeId, char* cmd, char** args) {
 			cmd = strcat(cmd, ".exe");
 		}
 
-		execv(cmd, args);
+		char* args2[sizeof(args) + sizeof(char*)];
+
+		args2[0] = cmd;
+
+		int k;
+		for (k = 0; args[k] != NULL; k++) {
+			args2[k + 1] = args[k];
+		}
+
+		execv(cmd, args2);
 
 		fprintf(stderr, "(controller) Node creation failed (execv(%s, [...]))\n", cmd);
 
@@ -169,19 +180,21 @@ static int createConnection(int id, char** args) {
 			dup2(fd, 1);
 			dup2(fd, 2);
 
-			char* argsToPass[] = {fifoFrom, fifoTo};
-
 			if (WINDOWS_MODE) {
+
+				char* argsToPass[] = {"connect.exe", fifoFrom, fifoTo};
 
 				execv("connect.exe", argsToPass);
 
-				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s]))\n", "connect.exe", fifoFrom, fifoTo);
+				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect.exe", fifoFrom, fifoTo, strerror(errno));
 
 			} else {
 
+				char* argsToPass[] = {"connect", fifoFrom, fifoTo};
+
 				execv("connect", argsToPass);
 
-				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s]))\n", "connect", fifoFrom, fifoTo);
+				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect", fifoFrom, fifoTo, strerror(errno));
 			}
 
 			// Se o execv falhou, terminar com código 127
@@ -236,6 +249,8 @@ static int removeAllNodes() {
 	for (i = 0; i < MAX_NODES; i++) {
 
 		if (nodes[i] != 0) {
+
+			printf("Removing node %d with pid %d\n", i, nodes[i]);
 			kill(nodes[i], SIGKILL);
 		}
 
@@ -304,7 +319,9 @@ int main(int argc, char** argv) {
 
 				} else if (strcmp(cmd, "disconnect") == 0) {
 
-					// TODO - disconnect
+					int to = (int) strtol(args[0], (char**) NULL, 10);
+
+					removeConnection(id, to);
 
 				} else if (strcmp(cmd, "inject") == 0) {
 
@@ -312,26 +329,37 @@ int main(int argc, char** argv) {
 
 				} else {
 
-					fprintf(stderr, "(controller) Skipping unknown command in configuration file (%s)\n", cmd);
+					fprintf(stderr, "Skipping unknown command in configuration file (%s)\n", cmd);
 				}
 			}
 
 			close(fd);
 
-			// TODO - for testes maloco
-			removeAllConnections();
-			removeAllNodes();
-
 			if (i < 0) {
 
-				fprintf(stderr, "(controller) Error reading configuration line: %s (readLine() returned %d)\n", strerror(errno), i);
+				fprintf(stderr, "Error reading configuration line: %s (readLine() returned %d)\n", strerror(errno), i);
 				return EXIT_FAILURE;
 
-			} else {
-				return EXIT_SUCCESS;
 			}
 		}
 	}
 
-	return EXIT_SUCCESS;
+	char buffer2[PIPE_BUF];
+	int j;
+	while ((j = readLine(0, buffer2, (long) PIPE_BUF)) > 0) {
+
+		if (strcmp(buffer2, "stop\n") == 0) {
+
+			printf("Removing all connections and nodes...\n");
+			removeAllConnections();
+			removeAllNodes();
+		}
+	}
+
+	if (j < 0) {
+		fprintf(stderr, "Error reading user input: %s (readLine returned %d)\n", strerror(errno), j);
+		return EXIT_FAILURE;
+	} else {
+		return EXIT_SUCCESS;
+	}
 }
