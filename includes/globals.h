@@ -3,10 +3,11 @@
 
 #define WINDOWS_MODE 1
 #define FIFO_PREFIX "sofifo/"
+#define MAX_NODES 2048
 
-char* getWritePipeStr(int pipeId);
+void getWritePipeStr(int pipeId, char* buffer);
 
-char* getReadPipeStr(int pipeId);
+void getReadPipeStr(int pipeId, char* buffer);
 
 // Duplica uma string
 char* duplicateString(char *org);
@@ -31,7 +32,7 @@ long getElementValue(char* string, long n, char* buffer, long bufferSize);
 
 // Array dinâmico
 
-#define INITIAL_ARRAY_SIZE 2014
+#define INITIAL_ARRAY_SIZE 1024
 
 typedef struct {
 	int *array;

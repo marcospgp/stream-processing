@@ -7,20 +7,14 @@
 
 #include "globals.h"
 
-char* getWritePipeStr(int pipeId) {
+void getWritePipeStr(int pipeId, char* buffer) {
 
-	char pipeIdStr[256];
-	sprintf(pipeIdStr, "%s%d%s", FIFO_PREFIX, pipeId, "W");
-
-	return pipeIdStr;
+	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "W");
 }
 
-char* getReadPipeStr(int pipeId) {
+void getReadPipeStr(int pipeId, char* buffer) {
 
-	char pipeIdStr[256];
-	sprintf(pipeIdStr, "%s%d%s", FIFO_PREFIX, pipeId, "R");
-
-	return pipeIdStr;
+	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "R");
 }
 
 
