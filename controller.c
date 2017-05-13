@@ -400,6 +400,8 @@ static int removeConnection(int from, int to) {
 	if (connections[from][to] != 0) {
 
 		kill(connections[from][to], SIGKILL);
+
+		connections[from][to] = 0;
 	}
 
 	return 0;
@@ -415,6 +417,8 @@ static int removeAllConnections() {
 			if (connections[i][j] != 0) {
 
 				kill(connections[i][j], SIGKILL);
+
+				connections[i][j] = 0;
 			}
 		}
 	}
@@ -432,6 +436,8 @@ static int removeAllInjectConnections() {
 			if (injectConnections[i][j] != 0) {
 
 				kill(injectConnections[i][j], SIGKILL);
+
+				injectConnections[i][j] = 0;
 			}
 		}
 	}
@@ -443,6 +449,8 @@ static int removeNode(int id) {
 
 	if (nodes[id] != 0) {
 		kill(nodes[id], SIGKILL);
+
+		nodes[id] = 0;
 	}
 
 	closeNamedPipePair(id);
@@ -459,6 +467,8 @@ static int removeAllNodes() {
 
 			printf("Removing node %d with pid %d\n", i, nodes[i]);
 			kill(nodes[i], SIGKILL);
+
+			nodes[i] = 0;
 		}
 
 		closeNamedPipePair(i);
@@ -471,7 +481,10 @@ static int removeAllInjectPipes() {
 
 	int i;
 	for (i = 0; i < MAX_INJECTS; i++) {
-		closeInjectPipe(i);
+		if (injectPipes[i] != 0) {
+			closeInjectPipe(i);
+			injectPipes[i] = 0;
+		}
 	}
 
 	return 0;
