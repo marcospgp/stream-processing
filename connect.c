@@ -15,6 +15,7 @@
 int main(int argc, char** argv) {
 
 	if (argc < 3) {
+		fprintf(stderr, "(connect) Tried to create a connection but didn't provide enough arguments\n");
 		return EXIT_FAILURE;
 	}
 
@@ -28,6 +29,14 @@ int main(int argc, char** argv) {
 
 	int from = open(pipeFrom, O_RDONLY);
 	int to = open(pipeTo, O_WRONLY);
+
+	if (from < 0 || to < 0) {
+
+		fprintf(stderr, "(connect) Error opening pipes (open(from) returned %d and open(to) returned %d)\n", from, to);
+		return EXIT_FAILURE;
+	}
+
+	printf("(connect) Connection from pipe %s to %s established.\n", argv[1], argv[2]);
 
 	while ( (i = readLine(from, buffer, (long) PIPE_BUF)) > 0) {
 
