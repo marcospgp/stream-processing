@@ -1,9 +1,10 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define WINDOWS_MODE 1
+#define WINDOWS_MODE 0
 #define FIFO_PREFIX "./FIFOS/"
-#define MAX_NODES 2048
+#define MAX_NODES 2048   // Maximum nodes operating at once
+#define MAX_INJECTS 2048 // Maximum inject inputs being received at once
 
 void getWritePipeStr(int pipeId, char* buffer);
 
