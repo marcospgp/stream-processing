@@ -41,7 +41,7 @@ static int createNamedPipePair(int pipeId) {
 	int resultR = mkfifo(readPipe, 0666);
 
 	if (resultW != 0 || resultR != 0) {
-		fprintf(stderr, "(controller) Error creating named pipe for node %d (mkfifo() returned %d (write) %d (read))\n", pipeId, resultW, resultR);
+		fprintf(stderr, "(controller) Error creating named pipe for node %d (mkfifo() returned %d (write) %d (read)) Error message: %s\n", pipeId, resultW, resultR, strerror(errno));
 		return -1;
 	}
 

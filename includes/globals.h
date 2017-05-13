@@ -2,7 +2,7 @@
 #define GLOBALS_H
 
 #define WINDOWS_MODE 1
-#define FIFO_PREFIX "sofifo/"
+#define FIFO_PREFIX "/tmp/sofifo/"
 #define MAX_NODES 2048
 
 void getWritePipeStr(int pipeId, char* buffer);
