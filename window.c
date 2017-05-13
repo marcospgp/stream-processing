@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 	long maxsize = columnB;
 	char *output = malloc(PIPE_BUF);
 	int flag = 1;
-	long firstvalue;
+	long firstvalue = 0;
 	int counter = 0;
 
 	while ( (i = readLine(0, buffer, (long) PIPE_BUF)) > 0) {
@@ -125,9 +125,7 @@ int main(int argc, char** argv) {
 				sprintf(output,"%lu", firstvalue);
 				flag = 0;
 			}
-
 		}
-
 
 		if (j == maxsize) {
 			array[0] = columnAValueLong;
