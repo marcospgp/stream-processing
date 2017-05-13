@@ -1,7 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define WINDOWS_MODE 1
+#define WINDOWS_MODE 0
 #define FIFO_PREFIX "/tmp/sofifo/"
 #define MAX_NODES 2048
 
