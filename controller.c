@@ -156,13 +156,6 @@ static int createConnection(int id, char** args) {
 		char fifoTo[256];
 		getReadPipeStr(nodeToId, fifoTo);
 
-		int out_pipe[2];
-		int err_pipe[2];
-
-		// Ouvir o que se passa na connection
-		pipe(out_pipe); //create a pipe
-		pipe(err_pipe);
-
 		int pid = fork();
 
 		if (pid != 0) {
