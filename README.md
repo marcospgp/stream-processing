@@ -15,6 +15,9 @@
  
  #### Step 3:
  Run `controller config.txt` (or `controller.exe config.txt` on windows)
-
+ 
  #### Step 4:
+ Engage in various incredible feats of engineering
+
+ #### Step 5:
  Enter "stop" in the terminal in order to close all processes and delete all FIFO pipe files.
