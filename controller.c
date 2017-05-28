@@ -179,13 +179,12 @@ static int createNode(int nodeId, char* cmd, char** args) {
 	getReadPipeStr(nodeId, readPipe);
 
 	// Add .exe suffix when in windows environment
-	if (WINDOWS_MODE && (
-		strcmp(cmd, "filter") == 0 ||
-		strcmp(cmd, "const")  == 0 ||
-		strcmp(cmd, "window") == 0 ||
-		strcmp(cmd, "spawn")  == 0
-	)) {
-		cmd = strcat(cmd, ".exe");
+	if (WINDOWS_MODE) {
+
+		char windowsCmd[256];
+		getWindowsString(cmd, windowsCmd);
+
+		cmd = windowsCmd;
 	}
 
 	// Create child to run the node
@@ -205,6 +204,8 @@ static int createNode(int nodeId, char* cmd, char** args) {
 		return 0;
 	}
 }
+
+// TODO - review code from here downwards
 
 static int createInjectConnection(int injectId, int nodeId) {
 

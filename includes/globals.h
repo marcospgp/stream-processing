@@ -14,6 +14,9 @@ void getReadPipeStr(int pipeId, char* buffer);
 
 void getInjectPipeStr(int pipeId, char* buffer);
 
+// Adds the .exe suffix to a string when needed
+void getWindowsString(char* original, char* buffer);
+
 // Duplica uma string
 char* duplicateString(char *org);
 
