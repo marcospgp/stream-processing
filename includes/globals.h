@@ -1,14 +1,16 @@
 ﻿#ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define WINDOWS_MODE 1
+#define WINDOWS_MODE 0
 #define FIFO_PREFIX "./FIFOS/"
-#define MAX_NODES 2048     // Maximum nodes operating at once
-#define MAX_LISTENERS 1024 // Maximum nodes receiving input from the same node at once
+#define MAX_NODES 2048   // Maximum nodes operating at once
+#define MAX_INJECTS 2048 // Maximum inject inputs being received at once
 
 void getWritePipeStr(int pipeId, char* buffer);
 
 void getReadPipeStr(int pipeId, char* buffer);
+
+void getInjectPipeStr(int pipeId, char* buffer);
 
 // Duplica uma string
 char* duplicateString(char *org);
