@@ -1,3 +1,15 @@
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <string.h>
+#include <errno.h>
+#include <signal.h>
+
 #include "childCreator.h"
 
 // Check childCreator.h for documentation
@@ -50,8 +62,6 @@ pid_t childCreator_createChild(char* cmd, char** args, char* readPipe, char* wri
 		execv(cmd, args2);
 
 		fprintf(stderr, "(childCreator) Node creation failed (execv(%s, [...]))\n", cmd);
-
-		closeNamedPipePair(nodeId);
 
 		close(fd);
 

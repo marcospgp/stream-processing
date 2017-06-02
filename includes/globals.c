@@ -22,16 +22,16 @@ void getInjectPipeStr(int pipeId, char* buffer) {
 	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "I");
 }
 
-void getWindowsString(char* original, char* buffer) {
+void getWindowsString(char* cmd, char* buffer) {
 
-	strcpy(buffer, original);
+	strcpy(buffer, cmd);
 
 	if (strcmp(cmd, "filter") == 0 ||
 		strcmp(cmd, "const")  == 0 ||
 		strcmp(cmd, "window") == 0 ||
 		strcmp(cmd, "spawn")  == 0
 	) {
-		strcat(original, ".exe");
+		strcat(buffer, ".exe");
 	}
 }
 

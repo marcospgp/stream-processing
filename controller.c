@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 
 #include "includes/globals.h"
 #include "includes/readLine.h"
+#include "includes/childCreator.h"
 
 static int nodes[MAX_NODES]; // nodes[nodeId] = processID (0 if it doesn't exist)
 
@@ -19,7 +21,7 @@ static int nodes[MAX_NODES]; // nodes[nodeId] = processID (0 if it doesn't exist
 static int connections[MAX_NODES]; // connections[from] = processID (0 if it doesn't exist)
 
 // The connectionDests array keeps track of what nodes are listening to the output of each node
-static int connectionDests[MAX_NODES][MAX_OUTGOING_CONNECTIONS] // connectionDests[nodeId] = listeningNodeIds[] (array ends at value -1)
+static int connectionDests[MAX_NODES][MAX_OUTGOING_CONNECTIONS]; // connectionDests[nodeId] = listeningNodeIds[] (array ends at value -1)
 
 // We need the injects array to keep track of the available ids for injects and their pipes
 static int injects[MAX_INJECTS]; // injects[injectId] = 1 if inject exists, 0 if it doesn't
@@ -159,7 +161,10 @@ static int createInjectPipe() {
  * stdins of all the listening nodes.
  *
  * @param id The id of the node which will send its output through this process
- * @param listeners A string array containing the id's of the listening nodes
+ * @param listeners A string array containing the id's of the listening nodes.
+                    if this is NULL, createConnection tries to use the listeners
+                    present in connectionDests
+ * @return 0 on success, -1 if something goes wrong
  */
 static int createConnection(int id, char** listeners) {
 
@@ -169,11 +174,11 @@ static int createConnection(int id, char** listeners) {
 		printf("(controller) Connection process detected while creating new connection. About to kill previous process and waitpid()\n");
 
 		kill(connections[id], SIGTERM); // SIGTERM so that we don't lose data
-		waitpid(connections[id], NULL); // Wait for process to close
+		waitpid(connections[id], NULL, 0); // Wait for process to close
 	}
 
 	// Create allListeners array to be sent to connection process
-	char** allListeners[MAX_OUTGOING_CONNECTIONS];
+	char* allListeners[MAX_OUTGOING_CONNECTIONS];
 
 	int k;
 	for (k = 0; connectionDests[id][k] != -1; k++) {
@@ -187,21 +192,24 @@ static int createConnection(int id, char** listeners) {
 
 	int destsSize = k;
 
-	// Add new listeners to connectionDests and allListeners arrays
-	int i;
-	for (i = 0; listeners[i] != NULL; i++) {
+	if (listeners != NULL) {
 
-		connectionDests[id][destsSize] = (int) strtol(listeners[i], (char**) NULL, 10);
+		// Add new listeners to connectionDests and allListeners arrays
+		int i;
+		for (i = 0; listeners[i] != NULL; i++) {
 
-		char str[64];
-		sprintf(str, "%d", connectionDests[id][destsSize]);
+			connectionDests[id][destsSize] = (int) strtol(listeners[i], (char**) NULL, 10);
 
-		allListeners[destsSize] = str;
+			char str[64];
+			sprintf(str, "%d", connectionDests[id][destsSize]);
 
-		destsSize++;
+			allListeners[destsSize] = str;
+
+			destsSize++;
+		}
 	}
 
-	connectionDests[id][destsSize] = NULL;
+	connectionDests[id][destsSize] = -1;
 	allListeners[destsSize] = NULL;
 
 	// Get sending node's output pipe
@@ -326,7 +334,7 @@ static int createInjectConnection(int injectId, int nodeId) {
 
 	// Create child to run the inject connection
 	// (Sending no arguments to connect makes it use the writePipe as output)
-	pid_t pid = childCreator_createChild(cmd, NULL, readPipe, writePipe);
+	pid_t pid = childCreator_createChild(cmd, NULL, injectPipe, pipeTo);
 
 	if (pid < 0) {
 
@@ -416,7 +424,7 @@ static int removeAllConnections() {
 	int i;
 	for (i = 0; i < MAX_NODES; i++) {
 
-		removeConnection[i];
+		removeConnection(i);
 	}
 
 	return 0;
@@ -468,7 +476,7 @@ static int removeAllNodes() {
 	int i;
 	for (i = 0; i < MAX_NODES; i++) {
 
-		removeNode[i];
+		removeNode(i);
 	}
 
 	return 0;
@@ -501,7 +509,21 @@ void parseCommand(char* cmdLine) {
 
 		int to = (int) strtol(args[0], (char**) NULL, 10);
 
-		removeConnection(id, to);
+		// Remove "to" from connectionDests
+		int i, found = 0;
+		for (i = 0; connectionDests[id][i] != -1; i++) {
+
+			if (!found && connectionDests[id][i] == to) {
+
+				found = 1;
+
+			} else if (found) {
+
+				connectionDests[id][i - 1] = connectionDests[id][i];
+			}
+		}
+
+		createConnection(id, NULL);
 
 	} else if (strcmp(cmd, "inject") == 0) {
 
@@ -582,7 +604,6 @@ int main(int argc, char** argv) {
 			removeAllConnections();
 			removeAllNodes();
 			removeAllInjectConnections();
-			removeAllInjectPipes();
 
 		} else {
 
