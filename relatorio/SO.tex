@@ -16,6 +16,7 @@
 \maketitle
 
 \begin{abstract}
+Neste relatório faremos uma análise do projeto de Sistemas Operativos, no qual o objetivo era desenvolver um programa, em C, de \textit{Stream Processing}. Assim, este documento apresenta detalhadamente a abordagem tomada ao problema proposto pela equipa docente da UC.
 \end{abstract}
 
 \tableofcontents
@@ -121,8 +122,8 @@ O controlador gere a criação de nós e injects, e das ligações entre estes. 
 
  Quando uma das conexões entre nós é modificada, o processo ponte anterior (caso exista) é terminado com SIGTERM (de modo a não serem perdidos dados) e é feito waitpid() para aguardar que termine. De seguida, é usada a informação guardada em connectionDests para juntar os novos ouvintes aos anteriores e criar um novo processo ponte que escreva em todos.
 
-\section{Conclusões}
+\section{Conclusão}
 \label{sec:conclusao}
-Este projeto serviu para aprofundarmos o conhecimento da linguagem C, assim como as bibliotecas que lhe estão associadas. Achámos que, com a realização de um trabalho deste tipo permite uma consolidação proveitosa da linguagem, e dos conceitos lecionados nas aulas de Sistemas Operativos. Permite também melhorar as habilidades na resolução de problemas.
+Este projeto serviu para aprofundarmos o conhecimento da linguagem C, assim como as bibliotecas que lhe estão associadas. Achámos que, a realização de um trabalho deste tipo permite uma consolidação proveitosa da linguagem, e dos conceitos lecionados nas aulas de Sistemas Operativos. Permite também melhorar as habilidades na resolução de problemas. Cremos ter sido vantajoso e engraçado ter feito este trabalho apesar de também sermos da opinião de que podíamos, apesar de tudo, ter tido uma melhor performance se tivéssemos mais tempo e menos carga de trabalhos por parte das outras UCs.
 
 \end{document}
