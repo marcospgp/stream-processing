@@ -432,12 +432,15 @@ static int removeAllInjectConnections() {
 			kill(injectConnections[i], SIGTERM);
 
 			injectConnections[i] = 0;
+		}
 
-			if (injects[i] != 0) {
+		// Remove inject pipe too
+		if (injects[i] != 0) {
 
-				closeInjectPipe(i);
-				injects[i]= 0;
-			}
+			closeInjectPipe(i);
+
+			// And signal that the id is now free
+			injects[i]= 0;
 		}
 	}
 
@@ -512,9 +515,6 @@ void parseCommand(char* cmdLine) {
 
 int main(int argc, char** argv) {
 
-	// TODO
-	// free all mallocs
-
 	/* Comandos que o controlador pode receber (através do ficheiro de configuração ou do stdin):
 	 * node <id> <cmd> <args...>
 	 *     define um nó na rede de processamento
@@ -534,11 +534,10 @@ int main(int argc, char** argv) {
 	memset(injectConnections, 0, sizeof(injectConnections));
 
 	// Inicializar array connectionDests a -1
-	int k, l;
+	// (apenas o primeiro valor, para sinalizar que o array acaba ali)
+	int k;
 	for (k = 0; k < MAX_NODES; k++) {
-		for (l = 0; l < MAX_OUTGOING_CONNECTIONS; l++) {
-			connectionDests[k][l] = -1;
-		}
+		connectionDests[k][0] = -1;
 	}
 
 	// O controlador pode receber um argumento que é o caminho de um ficheiro de configuração
