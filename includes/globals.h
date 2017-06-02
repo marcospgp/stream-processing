@@ -5,7 +5,7 @@
 #define FIFO_PREFIX "./FIFOS/"
 #define MAX_NODES 2048   // Maximum nodes operating at once
 #define MAX_INJECTS 2048 // Maximum inject inputs being received at once
-#define MAX_OUTGOING_CONNECTIONS 1024 // Maximum number of nodes that can listen to the output of a single node
+#define MAX_OUTGOING_CONNECTIONS 1024 // (PER NODE!) Maximum number of nodes that can listen to the output of a single node
 
 // Returns the path of a write pipe as a string given its ID
 void getWritePipeStr(int pipeId, char* buffer);
