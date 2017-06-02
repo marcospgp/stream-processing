@@ -11,7 +11,6 @@
 \author{Sérgio Jorge (A77730) \and Vítor Castro (A77870) \and Marcos Pereira (A79116)}
 \date{}
 
-
 \begin{document}
 
 \maketitle
@@ -26,7 +25,6 @@
 
 Este projeto foi realizado com o objetivo de desenvolver um programa responsável pela conceção de um sistema de \textit{Stream Processing}. Foram, então, propostas pelos professores, a realização de quatro componentes computacionais, construídas em C, que produzem determinadas operações elementares e a realização de um controlador que gere a rede de processamento. A realização das componentes assim como do próprio controlador, permitiram melhorar e consolidar os conhecimentos adquiridos, durante o semestre, na UC de Sistemas Operativos.
 Assim, de modo a facilitar a compreensão do projeto, o relatório está dividido da seguinte forma:
-
 
 \begin{description}
     \item[Secção 2 :] Problema;
@@ -48,9 +46,7 @@ Reproduz todas as linhas e acrescenta uma nova coluna com o resultado de uma ope
 \item[4 - spawn \textless cmd \textgreater \textless args...\textgreater]\hfill \\
 Reproduz todas as linhas, executando o comando indicado uma vez para cada uma delas e acrescentando uma nova coluna com o valor do exit status;
 \item[5 - controlador]\hfill \\
-MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
-MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
-MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
+A função do controlador é a de gerir a criação e manutenção de nós e das ligações entre eles.
 \end{description}
 
 \section{Solução}
@@ -97,7 +93,7 @@ MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
 \item guardamos o valor dos argumentos que têm o carater "\$" na frente para o array A e a posição destes para o array P;
 \item definimos um array B para o qual lemos o que é inserido no stdinput;
 \item percorremos o array A que contém os valores das colunas a serem lidas e copiamos o que está na coluna para a posição de argv onde o carater "\$" foi encontrado;
-\item faz-se um fork que executa através dos argumentos da função que foram entretanto manipulados; 
+\item faz-se um fork que executa através dos argumentos da função que foram entretanto manipulados;
 \item guarda-se o resultado da execução num array Output;
 \item colocamos o carater "dois pontos" no final do array B;
 \item inserimos o array Output no fim do array B;
@@ -105,8 +101,25 @@ MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
 \end{itemize}
 
 \subsection{controlador}
-TO DO - EXPLICAR CONTROLADOR - Marcos
+O controlador gere a criação de nós e injects, e das ligações entre estes. Para esse efeito, são guardadas informações em 5 arrays globais:
 
+\begin{itemize}
+\item nodes - Guarda os process id's de todos os nós em execução
+
+\item connections - Guarda os process id's de todos os processos "ponte" em execução (explicados abaixo)
+
+\item connectionDests - Guarda, relativamente a cada nó, a lista de nós que estão a receber o seu output
+
+\item injects - Guarda os process id's de todos os injects em execução
+
+\item injectConnections - Guarda os process id's de todos os processos "ponte" em execução que ligam um inject a um nó
+\end{itemize}
+
+ Por forma a realizar as ligações entre nós, foi necessária a criação de um processo auxiliar, denominado connect. Cada nó tem um destes processos ponte associado a si, que copia o seu output e envia para todos os nós a que está conectado.
+
+ Para tornar possíveis estas ligações foi necessária a criação de um par de named pipes (FIFOs) para cada nó, que substituem o seu stdin e stdout. Assim, um processo ponte consegue introduzir informação em um nó e obter o seu output através destas pipes. Um processo inject tem a si associado apenas uma named pipe, que substitui o seu stdout (um inject nunca recebe dados de outro nó).
+
+ Quando uma das conexões entre nós é modificada, o processo ponte anterior (caso exista) é terminado com SIGTERM (de modo a não serem perdidos dados) e é feito waitpid() para aguardar que termine. De seguida, é usada a informação guardada em connectionDests para juntar os novos ouvintes aos anteriores e criar um novo processo ponte que escreva em todos.
 
 \section{Conclusões}
 \label{sec:conclusao}
