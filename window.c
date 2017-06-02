@@ -22,36 +22,36 @@ int main(int argc, char** argv) {
 
 	char* end;
 
-	long columnA = strtol(argv[1], &end, 10);
+	long column = strtol(argv[1], &end, 10);
 	char* operator = argv[2];
-	long columnB = strtol(argv[3], &end, 10);
+	long lines = strtol(argv[3], &end, 10);
 
 	// Cria um array com o número de posições dado pelo 2º argumento da funcao
-	long array[columnB];
+	long array[lines];
 
 	// Poe o array a zeros
 	memset(array,0,sizeof(array));
 
 	// strtol error handling (strtol retorna 0 quando há um erro)
-	if ( (columnA == 0 || columnB == 0) && errno != 0 ) {
+	if ( (column == 0 || lines == 0) && errno != 0 ) {
 
 		fprintf(stderr, "(filter) Error reading arguments: %s\n", strerror(errno));
 		return EXIT_FAILURE;
 
-	} else if (columnA < 1 || columnB < 1) {
+	} else if (column < 1 || lines < 1) {
 
-		fprintf(stderr, "(filter) Error reading arguments (column value < 1): %ld %ld\n", columnA, columnB);
+		fprintf(stderr, "(filter) Error reading arguments (column value < 1): %ld %ld\n", column, lines);
 		return EXIT_FAILURE;
 	}
 
 	// Ler linhas do stdin
 
 	char buffer[PIPE_BUF];
-	char* columnAValue = (char*) malloc(PIPE_BUF);
+	char* columnValue = (char*) malloc(PIPE_BUF);
 
 	ssize_t i;
 	int j = 0;
-	long maxsize = columnB;
+	long maxsize = lines;
 	char *output = malloc(PIPE_BUF);
 	int flag = 1;
 	long firstvalue = 0;
@@ -61,18 +61,18 @@ int main(int argc, char** argv) {
 
 		// Obter valores das colunas
 		if (
-			getElementValue(buffer, columnA, columnAValue, (long) PIPE_BUF) < 1
+			getElementValue(buffer, column, columnValue, (long) PIPE_BUF) < 1
 		) {
 			fprintf(stderr, "(filter) Error obtaining column values (getElementValue returned 0)");
 			return EXIT_FAILURE;
 		}
 
-		long columnAValueLong;
+		long columnValueLong;
 		char* end2;
 
-		columnAValueLong = strtol(columnAValue, &end2, 10);
+		columnValueLong = strtol(columnValue, &end2, 10);
 
-		if ( (columnAValueLong == 0) && errno != 0 ) {
+		if ( (columnValueLong == 0) && errno != 0 ) {
 
 			fprintf(stderr, "(filter) Error converting column values to long (strtol returned 0 and set errno)");
 			return EXIT_FAILURE;
@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 			}
 		} else {
 			if (flag == 1) {
-				firstvalue = columnAValueLong;
+				firstvalue = columnValueLong;
 				sprintf(output,"%lu", firstuse);
 				flag = 2;
 			}
@@ -128,12 +128,12 @@ int main(int argc, char** argv) {
 		}
 
 		if (j == maxsize) {
-			array[0] = columnAValueLong;
+			array[0] = columnValueLong;
 			j = 0;
 			j++;
 		}
 		else {
-			array[j] = columnAValueLong;
+			array[j] = columnValueLong;
 			j++;
 			if (counter != 4) counter++;
 		}

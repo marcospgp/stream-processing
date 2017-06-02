@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 	// Ler linhas do stdin
 
 	char buffer[PIPE_BUF];
-	char* columnAValue = malloc(PIPE_BUF);
+	char* columnValue = malloc(PIPE_BUF);
 	ssize_t i;
 
 	while ( (i = readLine(0, buffer, (long) PIPE_BUF)) > 0) {
@@ -60,12 +60,12 @@ int main(int argc, char** argv) {
 		// Ciclo que obtem os valores das colunas que o argumento da funcao manda ler
 
 		for(int i = 0; i < nread; i++) {
-			if (getElementValue(buffer, input[i], &columnAValue[i], (long) PIPE_BUF) < 1) {
+			if (getElementValue(buffer, input[i], &columnValue[i], (long) PIPE_BUF) < 1) {
 				fprintf(stderr, "(filter) Error obtaining column values (getElementValue returned 0)");
 				return EXIT_FAILURE;
 			}
 			else {
-				strcpy(argv[*(positions+counter)], &columnAValue[i]); // copia o valor que esta na coluna para o argv
+				strcpy(argv[*(positions+counter)], &columnValue[i]); // copia o valor que esta na coluna para o argv
 				counter++;
 			}
 		}
