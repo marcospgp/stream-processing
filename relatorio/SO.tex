@@ -1,0 +1,115 @@
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[portuges]{babel}
+\usepackage{a4wide}
+\usepackage{multicol}
+\usepackage{spverbatim}
+\usepackage{graphicx}
+
+\title{Projeto de SO - Stream Processing\\Grupo 96}
+\author{Sérgio Jorge (A77730) \and Vítor Castro (A77870) \and Marcos Pereira (A79116)}
+\date{}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\tableofcontents
+
+\section{Introdução}
+\label{sec:intro}
+
+Este projeto foi realizado com o objetivo de desenvolver um programa responsável pela conceção de um sistema de \textit{Stream Processing}. Foram, então, propostas pelos professores, a realização de quatro componentes computacionais, construídas em C, que produzem determinadas operações elementares e a realização de um controlador que gere a rede de processamento. A realização das componentes assim como do próprio controlador, permitiram melhorar e consolidar os conhecimentos adquiridos, durante o semestre, na UC de Sistemas Operativos.
+Assim, de modo a facilitar a compreensão do projeto, o relatório está dividido da seguinte forma:
+
+
+\begin{description}
+    \item[Secção 2 :] Problema;
+    \item[Secção 3 :] Solução;
+    \item[Secção 4 :] Conclusão.
+\end{description}
+\pagebreak
+
+\section{Problema}
+\label{sec:problema}
+Neste projeto de SO, é-nos pedido para fazermos um sistema de \textit{Stream Processing}. Assim, o que devemos fazer para gerar a rede de processamento são os seguintes módulos:
+\begin{description}
+\item[1 - const \textless valor \textgreater]\hfill \\
+Reproduz as linhas e acrescenta uma nova coluna com o valor que é passado como argumento à função;
+\item[2 - filter \textless coluna \textgreater \textless operador \textgreater \textless operando \textgreater]\hfill \\
+Reproduz as linhas nas quais a condição dada como argumento se verifica;
+\item[3 - window \textless coluna \textgreater \textless operação \textgreater \textless linhas \textgreater]\hfill \\
+Reproduz todas as linhas e acrescenta uma nova coluna com o resultado de uma operação sobre os valores da coluna indicada nas linhas anteriores;
+\item[4 - spawn \textless cmd \textgreater \textless args...\textgreater]\hfill \\
+Reproduz todas as linhas, executando o comando indicado uma vez para cada uma delas e acrescentando uma nova coluna com o valor do exit status;
+\item[5 - controlador]\hfill \\
+MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
+MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
+MARCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOS
+\end{description}
+
+\section{Solução}
+\label{sec:solucao}
+
+\subsection{const}
+
+\begin{itemize}
+\item guardamos o valor que é passado como argumento;
+\item definimos um array para o qual lemos o que é inserido no stdinput;
+\item colocamos o carater "dois pontos" no final do array;
+\item inserimos o valor no fim do array;
+\item escrevemos o array para o stdoutput.
+\end{itemize}
+
+\subsection{filter}
+
+\begin{itemize}
+\item guardamos o valor dos argumentos (operador e duas colunas);
+\item definimos um array para o qual lemos o que é inserido no stdinput;
+\item guardamos os valores que estão nas duas colunas que nos foram indicadas nos argumentos da função;
+\item fazemos a comparação entre os valores guardados na alínea anterior;
+\item se a comparação for válida, escrevemos a linha para o stoutput. Se não for válida, nada é feito.
+\end{itemize}
+
+\subsection{window}
+
+\begin{itemize}
+\item guardamos o valor dos argumentos (coluna, operador e linhas);
+\item definimos um array A com linhas posições e pomos esse array a zeros;
+\item definimos um array B para o qual lemos o que é inserido no stdinput;
+\item guardamos o valor que está na coluna do stdinput que nos foi indicada no argumento da função;
+\item preenchemos o array A com os valores que vão sendo lidos pela alínea anterior. Este array só tem linhas posições pelo que quando enche, é substituído o valor que está na primeira posição;
+\item para as diferentes operações, percorre-se o array A e guarda-se o resultado num array Output;
+\item colocamos o carater "dois pontos" no final do array B;
+\item inserimos o array Output no fim do array B;
+\item escrevemos o array B para o stdoutput.
+
+\end{itemize}
+
+\subsection{spawn}
+
+\begin{itemize}
+\item guardamos o valor dos argumentos que têm o carater "\$" na frente para o array A e a posição destes para o array P;
+\item definimos um array B para o qual lemos o que é inserido no stdinput;
+\item percorremos o array A que contém os valores das colunas a serem lidas e copiamos o que está na coluna para a posição de argv onde o carater "\$" foi encontrado;
+\item faz-se um fork que executa através dos argumentos da função que foram entretanto manipulados; 
+\item guarda-se o resultado da execução num array Output;
+\item colocamos o carater "dois pontos" no final do array B;
+\item inserimos o array Output no fim do array B;
+\item escrevemos o array B para o stdoutput.
+\end{itemize}
+
+\subsection{controlador}
+TO DO - EXPLICAR CONTROLADOR - Marcos
+
+
+\section{Conclusões}
+\label{sec:conclusao}
+Este projeto serviu para aprofundarmos o conhecimento da linguagem C, assim como as bibliotecas que lhe estão associadas. Achámos que, com a realização de um trabalho deste tipo permite uma consolidação proveitosa da linguagem, e dos conceitos lecionados nas aulas de Sistemas Operativos. Permite também melhorar as habilidades na resolução de problemas.
+
+\end{document}
