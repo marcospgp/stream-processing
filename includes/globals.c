@@ -22,6 +22,19 @@ void getInjectPipeStr(int pipeId, char* buffer) {
 	sprintf(buffer, "%s%d%s", FIFO_PREFIX, pipeId, "I");
 }
 
+void getWindowsString(char* original, char* buffer) {
+
+	strcpy(buffer, original);
+
+	if (strcmp(cmd, "filter") == 0 ||
+		strcmp(cmd, "const")  == 0 ||
+		strcmp(cmd, "window") == 0 ||
+		strcmp(cmd, "spawn")  == 0
+	) {
+		strcat(original, ".exe");
+	}
+}
+
 // String to long
 // Retorna 1 se a conversão foi bem sucedida, caso contrário retorna 0
 int parseLong(const char* str, long* val) {

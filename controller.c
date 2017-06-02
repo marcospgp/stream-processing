@@ -12,16 +12,24 @@
 #include "includes/globals.h"
 #include "includes/readLine.h"
 
-/* int open(const char *path, int oflag [, mode]);
-ssize_t read(int fildes, void *buf, size_t nbyte);
-ssize_t write(int fildes, const void *buf, size_t nbyte);
-int close(int fildes); */
+static int nodes[MAX_NODES]; // nodes[nodeId] = processID (0 if it doesn't exist)
 
-static int nodes[MAX_NODES];                          //                       nodes[nodeId] = processID (0 se não existe)
-static int connections[MAX_NODES][MAX_NODES];         //               connections[from][to] = processID (0 se não existe)
-static int injectPipes[MAX_INJECTS];                  //               injectPipes[injectId] = 1 se existe pipe, 0 se ainda não existe
-static int injectConnections[MAX_INJECTS][MAX_NODES]; // injectConnections[injectId][nodeId] = processID (0 se não existe)
+// Connection proceses - each node has one that copies its output as many times as needed
+// and sends it to all the listening nodes
+static int connections[MAX_NODES]; // connections[from] = processID (0 if it doesn't exist)
 
+// The connectionDests array keeps track of what nodes are listening to the output of each node
+static int connectionDests[MAX_NODES][MAX_OUTGOING_CONNECTIONS] // connectionDests[nodeId] = listeningNodeIds[] (array ends at value -1)
+
+// We need the injects array to keep track of the available ids for injects and their pipes
+static int injects[MAX_INJECTS]; // injects[injectId] = 1 if inject exists, 0 if it doesn't
+
+// Inject connection processes - each inject process has one that sends its output to one listening node
+static int injectConnections[MAX_INJECTS]; // injectConnections[injId] = processID (0 if it doesn't exist)
+
+/**
+ * Closes a pair of named pipes (FIFOs)
+ */
 static void closeNamedPipePair(int pipeId) {
 
 	char writePipe[256];
@@ -30,33 +38,46 @@ static void closeNamedPipePair(int pipeId) {
 	getWritePipeStr(pipeId, writePipe);
 	getReadPipeStr(pipeId, readPipe);
 
-	if (access(writePipe, F_OK) == -1 || access(readPipe, F_OK) == -1) {
-		return;
+	// Check that pipes exist first
+	if (access(writePipe, F_OK) != -1) {
+		unlink(writePipe);
 	}
 
-	unlink(writePipe);
-	unlink(readPipe);
+	if (access(readPipe, F_OK) != -1) {
+		unlink(readPipe);
+	}
 
 	return;
 }
 
-static void closeInjectPipe(int pipeId) {
+/**
+ * Closes a named pipe used by an inject process
+ */
+static void closeInjectPipe(int injectId) {
 
 	char pipe[256];
 
-	getInjectPipeStr(pipeId, pipe);
+	getInjectPipeStr(injectId, pipe);
 
-	if (access(pipe, F_OK) == -1) {
-		return;
+	// Check that pipe exists
+	if (access(pipe, F_OK) != -1) {
+		unlink(pipe);
 	}
 
-	unlink(pipe);
-
-	injectPipes[pipeId] = 0;
+	// Signal that this id is now available
+	injects[injectId] = 0;
 
 	return;
 }
 
+/**
+ * Creates a pair of names pipes (FIFOs) through which
+ * the input and output of a node will pass
+ * (note that the output will always go to a connection process
+ * so that we can send the data to multiple nodes)
+ *
+ * @return 0 on success, -1 if something went wrong
+ */
 static int createNamedPipePair(int pipeId) {
 
 	char writePipe[256];
@@ -65,14 +86,14 @@ static int createNamedPipePair(int pipeId) {
 	getWritePipeStr(pipeId, writePipe);
 	getReadPipeStr(pipeId, readPipe);
 
-	// Verificar se a named pipe já existe
+	// Check if named pipes already exist
 	if (access(writePipe, F_OK) == 0 || access(readPipe, F_OK) == 0) {
 		fprintf(stderr, "Creating a FIFO pair that already exists, going to delete first\n");
 
 		closeNamedPipePair(pipeId);
 	}
 
-	// Criar a named pipe
+	// Create the named pipe pair
 
 	printf("Creating pipes %s and %s\n", writePipe, readPipe);
 
@@ -87,15 +108,19 @@ static int createNamedPipePair(int pipeId) {
 	return 0;
 }
 
-// Retorna a id da pipe criada ou -1 se houver um erro
+/**
+ * Creates a pipe through which the output of an inject will pass
+ *
+ * @return  The new inject's id or -1 if something went wrong
+ */
 static int createInjectPipe() {
 
-	// Find available pipe
+	// Find available pipe id
 	int i, foundFree = 0;
 	for (i = 0; i < MAX_INJECTS; i++) {
-		if (injectPipes[i] == 0) {
+		if (injects[i] == 0) {
 			foundFree = 1;
-			injectPipes[i] = 1;
+			injects[i] = 1;
 			break;
 		}
 	}
@@ -108,14 +133,13 @@ static int createInjectPipe() {
 	char pipe[256];
 	getInjectPipeStr(i, pipe);
 
-	// Verificar se a named pipe já existe
+	// Check if named pipe already exists
 	if (access(pipe, F_OK) == 0) {
 		fprintf(stderr, "Creating an inject FIFO pipe that already exists, going to delete first\n");
-
 		closeInjectPipe(i);
 	}
 
-	// Criar a named pipe
+	// Create the named pipe
 
 	printf("Creating inject pipe %s\n", pipe);
 
@@ -129,6 +153,98 @@ static int createInjectPipe() {
 	return i;
 }
 
+/**
+ * Creates a connection process for a node.
+ * The output of the node is copied as many times as needed and sent to the
+ * stdins of all the listening nodes.
+ *
+ * @param id The id of the node which will send its output through this process
+ * @param listeners A string array containing the id's of the listening nodes
+ */
+static int createConnection(int id, char** listeners) {
+
+	// Check if connection already exists
+	if (connections[id]) {
+
+		printf("(controller) Connection process detected while creating new connection. About to kill previous process and waitpid()\n");
+
+		kill(connections[id], SIGTERM); // SIGTERM so that we don't lose data
+		waitpid(connections[id], NULL); // Wait for process to close
+	}
+
+	// Create allListeners array to be sent to connection process
+	char** allListeners[MAX_OUTGOING_CONNECTIONS];
+
+	int k;
+	for (k = 0; connectionDests[id][k] != -1; k++) {
+
+		// Convert id to string
+		char str[64];
+		sprintf(str, "%d", connectionDests[id][k]);
+
+		allListeners[k] = str;
+	}
+
+	int destsSize = k;
+
+	// Add new listeners to connectionDests and allListeners arrays
+	int i;
+	for (i = 0; listeners[i] != NULL; i++) {
+
+		connectionDests[id][destsSize] = (int) strtol(listeners[i], (char**) NULL, 10);
+
+		char str[64];
+		sprintf(str, "%d", connectionDests[id][destsSize]);
+
+		allListeners[destsSize] = str;
+
+		destsSize++;
+	}
+
+	connectionDests[id][destsSize] = NULL;
+	allListeners[destsSize] = NULL;
+
+	// Get sending node's output pipe
+	char fifoFrom[128];
+	getWritePipeStr(id, fifoFrom);
+
+	char *cmd = "connect";
+
+	// Add .exe suffix when in windows environment
+	if (WINDOWS_MODE) {
+
+		char windowsCmd[128];
+		getWindowsString(cmd, windowsCmd);
+
+		cmd = windowsCmd;
+	}
+
+	// Create child to run the connection
+	// Use allListeners to tell process what nodes to send the output to
+	pid_t pid = childCreator_createChild(cmd, allListeners, fifoFrom, NULL);
+
+	if (pid < 0) {
+
+		fprintf(stderr, "(controller) Connection creation failed\n");
+		connections[id] = 0;
+
+		return -1;
+
+	} else {
+
+		connections[id] = pid;
+
+		return 0;
+	}
+}
+
+/**
+ * Creates a node that will run a command with a set of arguments
+ *
+ * @param cmd The command to be executed by the node
+ * @param args The arguments to be applied to the command
+ * @return 0 if creation goes fine, -1 if something goes wrong
+ */
 static int createNode(int nodeId, char* cmd, char** args) {
 
 	printf("Creating node %d with cmd %s and args ", nodeId, cmd);
@@ -140,122 +256,90 @@ static int createNode(int nodeId, char* cmd, char** args) {
 
 	printf("\n");
 
-	// Criar um filho para correr o nó
+	// Create named pipe pair for this node
+	if (createNamedPipePair(nodeId) != 0) {
+		fprintf(stderr, "Failed to create named pipe\n");
+		exit(EXIT_FAILURE);
+	}
 
-	pid_t pid = fork();
+	// Convert pipeId to string
+	char writePipe[256];
+	char readPipe[256];
+	getWritePipeStr(nodeId, writePipe);
+	getReadPipeStr(nodeId, readPipe);
 
-	if (pid != 0) {
+	// Add .exe suffix when in windows environment
+	if (WINDOWS_MODE) {
 
-		nodes[nodeId] = pid;
+		char windowsCmd[256];
+		getWindowsString(cmd, windowsCmd);
 
-	} else {
+		cmd = windowsCmd;
+	}
 
-		// Criar named pipe para este nó
-		if (createNamedPipePair(nodeId) != 0) {
-			fprintf(stderr, "Failed to create named pipe\n");
-			exit(EXIT_FAILURE);
-		}
+	// Create child to run the node
+	pid_t pid = childCreator_createChild(cmd, args, readPipe, writePipe);
 
-		// Redirecionar stderr
-		int fd = open("log.txt", O_WRONLY|O_APPEND|O_CREAT, 0666);
-		dup2(fd, 2);
+	if (pid < 0) {
 
-		// Converter pipeId para string
-		char writePipe[256];
-		char readPipe[256];
-
-		getWritePipeStr(nodeId, writePipe);
-		getReadPipeStr(nodeId, readPipe);
-
-		// Trocar stdout e stdin deste processo por named pipes
-
-		int resW = open(writePipe, O_WRONLY);
-		int resR = open(readPipe, O_RDONLY);
-
-		dup2(resR, 0);
-		dup2(resW, 1);
-
-		// Adicionar sufixo .exe quando estivermos a trabalhar em windows
-		if (WINDOWS_MODE && (
-			strcmp(cmd, "filter") == 0 ||
-			strcmp(cmd, "const")  == 0 ||
-			strcmp(cmd, "window") == 0 ||
-			strcmp(cmd, "spawn")  == 0
-		)) {
-			cmd = strcat(cmd, ".exe");
-		}
-
-		// Criar array de argumentos para passar ao exec (primeiro argumento tem de ser o comando)
-
-		char* args2[sizeof(args) + sizeof(char*)];
-
-		args2[0] = cmd;
-
-		int k;
-		for (k = 0; args[k] != NULL; k++) {
-			args2[k + 1] = args[k];
-		}
-
-		execv(cmd, args2);
-
-		fprintf(stderr, "(controller) Node creation failed (execv(%s, [...]))\n", cmd);
-
-		close(resW);
-		close(resR);
+		fprintf(stderr, "(controller) Node creation failed\n");
 
 		closeNamedPipePair(nodeId);
 
-		// Se o execv falhou, terminar com código 127
-		exit(127);
-	}
+		return -1;
 
-	return 0;
+	} else {
+
+		nodes[nodeId] = pid;
+
+		return 0;
+	}
 }
 
+/**
+ * Spawns a connection process which will connect an inject to a node
+ *
+ * @param injectId The id of the sending inject
+ * @param nodeId The id of the receiving node
+ * @return 0 on success, -1 if something went wrong
+ */
 static int createInjectConnection(int injectId, int nodeId) {
 
-	// Ir buscar a pipe onde o inject vai escrever
+	// Get pipe ids
+
 	char injectPipe[256];
 	getInjectPipeStr(injectId, injectPipe);
 
 	char pipeTo[256];
 	getReadPipeStr(nodeId, pipeTo);
 
-	int pid = fork();
+	char *cmd = "connect";
 
-	if (pid != 0) {
+	// Add .exe suffix when in windows environment
+	if (WINDOWS_MODE) {
 
-		injectConnections[injectId][nodeId] = pid;
+		char windowsCmd[128];
+		getWindowsString(cmd, windowsCmd);
+
+		cmd = windowsCmd;
+	}
+
+	// Create child to run the inject connection
+	// (Sending no arguments to connect makes it use the writePipe as output)
+	pid_t pid = childCreator_createChild(cmd, NULL, readPipe, writePipe);
+
+	if (pid < 0) {
+
+		fprintf(stderr, "(controller) Inect connection creation failed\n");
+
+		return -1;
 
 	} else {
 
-		// Redirecionar stdout e stderr
-		int fd = open("log.txt", O_WRONLY|O_APPEND|O_CREAT, 0666);
-		dup2(fd, 1);
-		dup2(fd, 2);
+		injectConnections[injectId] = pid;
 
-		if (WINDOWS_MODE) {
-
-			char* argsToPass[] = {"connect.exe", injectPipe, pipeTo};
-
-			execv("connect.exe", argsToPass);
-
-			fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect.exe", injectPipe, pipeTo, strerror(errno));
-
-		} else {
-
-			char* argsToPass[] = {"connect", injectPipe, pipeTo};
-
-			execv("connect", argsToPass);
-
-			fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect", injectPipe, pipeTo, strerror(errno));
-		}
-
-		// Se o execv falhou, terminar com código 127
-		exit(127);
+		return 0;
 	}
-
-	return 0;
 }
 
 static int createInject(int nodeId, char* cmd, char** args) {
@@ -269,139 +353,59 @@ static int createInject(int nodeId, char* cmd, char** args) {
 
 	printf("\n");
 
-	// Criar um filho para correr o nó
+	// Criar named pipe para este inject
 
-	pid_t pid = fork();
+	int injectId = createInjectPipe();
 
-	if (pid == 0) {
+	if (injectId != 0) {
+		fprintf(stderr, "Failed to create inject pipe\n");
+		exit(EXIT_FAILURE);
+	}
 
-		// Criar named pipe para este inject
+	// Converter pipeId para string
+	char injectPipe[128];
 
-		int injectId = createInjectPipe();
+	getInjectPipeStr(nodeId, injectPipe);
 
-		if (injectId != 0) {
-			fprintf(stderr, "Failed to create inject pipe\n");
-			exit(EXIT_FAILURE);
-		}
+	// Criar o connect deste inject para o nó
+	createInjectConnection(injectId, nodeId);
 
-		// Redirecionar stderr
-		int fd = open("log.txt", O_WRONLY|O_APPEND|O_CREAT, 0666);
-		dup2(fd, 2);
+	// Add .exe suffix when in windows environment
+	if (WINDOWS_MODE) {
 
-		// Converter pipeId para string
-		char injectPipe[256];
+		char windowsCmd[128];
+		getWindowsString(cmd, windowsCmd);
 
-		getInjectPipeStr(nodeId, injectPipe);
+		cmd = windowsCmd;
+	}
 
-		// Trocar stdout deste processo pela inject pipe
+	// Criar um filho para correr o inject
+	pid_t pid = childCreator_createChild(cmd, args, NULL, injectPipe);
 
-		int res = open(injectPipe, O_WRONLY);
+	if (pid < 0) {
 
-		dup2(res, 1);
-
-		// Adicionar sufixo .exe quando estivermos a trabalhar em windows
-		// (isto não é preciso porque estes comandos não devem ser usados mas deixa tar)
-		if (WINDOWS_MODE && (
-			strcmp(cmd, "filter") == 0 ||
-			strcmp(cmd, "const")  == 0 ||
-			strcmp(cmd, "window") == 0 ||
-			strcmp(cmd, "spawn")  == 0
-		)) {
-			cmd = strcat(cmd, ".exe");
-		}
-
-		// Criar array de argumentos para passar ao exec (primeiro argumento tem de ser o comando)
-
-		char* args2[sizeof(args) + sizeof(char*)];
-
-		args2[0] = cmd;
-
-		int k;
-		for (k = 0; args[k] != NULL; k++) {
-			args2[k + 1] = args[k];
-		}
-
-		// Antes de iniciar o comando, criar o connect deste inject para o nó
-		createInjectConnection(injectId, nodeId);
-
-		execv(cmd, args2);
-
-		fprintf(stderr, "(controller) Inject creation failed (execv(%s, [...]))\n", cmd);
-
-		close(res);
+		fprintf(stderr, "(controller) Inject creation failed\n");
 
 		closeInjectPipe(injectId);
 
-		// Se o execv falhou, terminar com código 127
-		exit(127);
-	}
+		return -1;
 
-	return 0;
+	} else {
+
+		injects[injectId] = pid;
+
+		return 0;
+	}
 }
 
-static int createConnection(int id, char** args) {
+static int removeConnection(int id) {
 
-	// Ir buscar a pipe onde o nó escreve
-	char fifoFrom[256];
-	getWritePipeStr(id, fifoFrom);
+	if (connections[id] != 0) {
 
-	// Ir buscar as pipes onde os outros nós vão ler
+		kill(connections[id], SIGTERM);
 
-	int j;
-	for (j = 0; args[j] != NULL; j++) {
-
-		int nodeToId = (int) strtol(args[j], (char**) NULL, 10);
-
-		printf("Connecting node %d to %d\n", id, nodeToId);
-
-		char fifoTo[256];
-		getReadPipeStr(nodeToId, fifoTo);
-
-		int pid = fork();
-
-		if (pid != 0) {
-
-			connections[id][nodeToId] = pid;
-
-		} else {
-
-			// Redirecionar stdout e stderr
-			int fd = open("log.txt", O_WRONLY|O_APPEND|O_CREAT, 0666);
-			dup2(fd, 1);
-			dup2(fd, 2);
-
-			if (WINDOWS_MODE) {
-
-				char* argsToPass[] = {"connect.exe", fifoFrom, fifoTo};
-
-				execv("connect.exe", argsToPass);
-
-				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect.exe", fifoFrom, fifoTo, strerror(errno));
-
-			} else {
-
-				char* argsToPass[] = {"connect", fifoFrom, fifoTo};
-
-				execv("connect", argsToPass);
-
-				fprintf(stderr, "(controller) Connection creation failed (execv(%s, [%s, %s])) Error message: %s\n", "connect", fifoFrom, fifoTo, strerror(errno));
-			}
-
-			// Se o execv falhou, terminar com código 127
-			exit(127);
-		}
-	}
-
-	return 0;
-}
-
-static int removeConnection(int from, int to) {
-
-	if (connections[from][to] != 0) {
-
-		kill(connections[from][to], SIGKILL);
-
-		connections[from][to] = 0;
+		connections[id] = 0;
+		connectionDests[id][0] = -1;
 	}
 
 	return 0;
@@ -409,18 +413,10 @@ static int removeConnection(int from, int to) {
 
 static int removeAllConnections() {
 
-	int i, j;
+	int i;
 	for (i = 0; i < MAX_NODES; i++) {
 
-		for (j = 0; j < MAX_NODES; j++) {
-
-			if (connections[i][j] != 0) {
-
-				kill(connections[i][j], SIGKILL);
-
-				connections[i][j] = 0;
-			}
-		}
+		removeConnection[i];
 	}
 
 	return 0;
@@ -428,17 +424,23 @@ static int removeAllConnections() {
 
 static int removeAllInjectConnections() {
 
-	int i, j;
+	int i;
 	for (i = 0; i < MAX_INJECTS; i++) {
 
-		for (j = 0; j < MAX_NODES; j++) {
+		if (injectConnections[i] != 0) {
 
-			if (injectConnections[i][j] != 0) {
+			kill(injectConnections[i], SIGTERM);
 
-				kill(injectConnections[i][j], SIGKILL);
+			injectConnections[i] = 0;
+		}
 
-				injectConnections[i][j] = 0;
-			}
+		// Remove inject pipe too
+		if (injects[i] != 0) {
+
+			closeInjectPipe(i);
+
+			// And signal that the id is now free
+			injects[i]= 0;
 		}
 	}
 
@@ -448,12 +450,15 @@ static int removeAllInjectConnections() {
 static int removeNode(int id) {
 
 	if (nodes[id] != 0) {
-		kill(nodes[id], SIGKILL);
+
+		kill(nodes[id], SIGTERM);
 
 		nodes[id] = 0;
 	}
 
 	closeNamedPipePair(id);
+
+	removeConnection(id);
 
 	return 0;
 }
@@ -463,28 +468,7 @@ static int removeAllNodes() {
 	int i;
 	for (i = 0; i < MAX_NODES; i++) {
 
-		if (nodes[i] != 0) {
-
-			printf("Removing node %d with pid %d\n", i, nodes[i]);
-			kill(nodes[i], SIGKILL);
-
-			nodes[i] = 0;
-		}
-
-		closeNamedPipePair(i);
-	}
-
-	return 0;
-}
-
-static int removeAllInjectPipes() {
-
-	int i;
-	for (i = 0; i < MAX_INJECTS; i++) {
-		if (injectPipes[i] != 0) {
-			closeInjectPipe(i);
-			injectPipes[i] = 0;
-		}
+		removeNode[i];
 	}
 
 	return 0;
@@ -543,11 +527,18 @@ int main(int argc, char** argv) {
 	 *     comando cmd executado com a lista de argumentos args
 	 */
 
-	// Inicializar arrays a -1
-	memset(connections, 0, sizeof(connections[0][0]) * MAX_NODES * MAX_NODES);
+	// Inicializar arrays a 0
 	memset(nodes, 0, sizeof(nodes));
-	memset(injectPipes, 0, sizeof(injectPipes));
-	memset(injectConnections, 0, sizeof(injectConnections[0][0]) * MAX_INJECTS * MAX_NODES);
+	memset(connections, 0, sizeof(connections));
+	memset(injects, 0, sizeof(injects));
+	memset(injectConnections, 0, sizeof(injectConnections));
+
+	// Inicializar array connectionDests a -1
+	// (apenas o primeiro valor, para sinalizar que o array acaba ali)
+	int k;
+	for (k = 0; k < MAX_NODES; k++) {
+		connectionDests[k][0] = -1;
+	}
 
 	// O controlador pode receber um argumento que é o caminho de um ficheiro de configuração
 	if (argc > 1) {
