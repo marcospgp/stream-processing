@@ -14,33 +14,64 @@
 // Faz uma ligação entre duas named pipes
 int main(int argc, char** argv) {
 
-	if (argc < 3) {
-		fprintf(stderr, "(connect) Tried to create a connection but didn't provide enough arguments\n");
-		return EXIT_FAILURE;
-	}
+	// Se argc < 2, este connect só tem de mandar o que lê para o stdout
+	// (provavelmente é uma ponte entre um nó e um inject, e o childCreator
+	// já trocou o seu stdout por uma named pipe)
 
-	char* pipeFrom = argv[1];
-	char* pipeTo = argv[2];
+	// Obter as input pipes dos nodes que vão ouvir
+
+	char* toPipes[argc - 1];
+	int toPipesFD[argc - 1];
+	int numListeners = 0;
+
+	if (argc > 1) {
+
+
+		int k;
+		for (k = 0; toPipes[k] != NULL; k++) {
+
+			int nodeToId = (int) strtol(argv[k], (char**) NULL, 10);
+
+			char pipeTo[256];
+			getReadPipeStr(nodeToId, pipeTo);
+
+			toPipes[k] = pipeTo;
+
+			int to = open(pipeTo, O_WRONLY);
+
+			if (to < 0) {
+				fprintf(stderr, "(connect) Error opening listener pipe %s (open returned %d)\n", pipeTo, to);
+				return EXIT_FAILURE;
+			}
+
+			toPipesFD[k] = to;
+		}
+
+		// Compiler says this variable is not used, but it is -_-
+		// (inside the condition on a for loop below)
+		numListeners = k;
+	}
 
 	// Ler linhas do stdin
 
-	char buffer[PIPE_BUF];
+	char readBuffer[PIPE_BUF];
 	ssize_t i;
 
-	int from = open(pipeFrom, O_RDONLY);
-	int to = open(pipeTo, O_WRONLY);
+	printf("(connect) Connection from pipe %s to listeners established.\n", argv[1]);
 
-	if (from < 0 || to < 0) {
+	while ( (i = readLine(0, readBuffer, (long) PIPE_BUF)) > 0 ) {
 
-		fprintf(stderr, "(connect) Error opening pipes (open(from) returned %d and open(to) returned %d)\n", from, to);
-		return EXIT_FAILURE;
-	}
+		// Escrever input para todos os ouvintes
+		if (argc > 1) {
 
-	printf("(connect) Connection from pipe %s to %s established.\n", argv[1], argv[2]);
+			int l;
+			for (l = 0; l < numListeners; l++) {
+				write(toPipesFD[l], readBuffer, strlen(readBuffer));
+			}
 
-	while ( (i = readLine(from, buffer, (long) PIPE_BUF)) > 0) {
-
-		write(to, buffer, strlen(buffer));
+		} else {
+			write(1, readBuffer, strlen(readBuffer));
+		}
 	}
 
 	if (i < 0) {

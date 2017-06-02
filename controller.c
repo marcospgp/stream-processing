@@ -73,7 +73,7 @@ static void closeInjectPipe(int injectId) {
 }
 
 /**
- * Creates a pair of names pipes (FIFOs) through which
+ * Creates a pair of named pipes (FIFOs) through which
  * the input and output of a node will pass
  * (note that the output will always go to a connection process
  * so that we can send the data to multiple nodes)
