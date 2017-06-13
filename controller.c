@@ -557,9 +557,11 @@ int main(int argc, char** argv) {
 
 	// Inicializar array connectionDests a -1
 	// (apenas o primeiro valor, para sinalizar que o array acaba ali)
-	int k;
+	int k, l;
 	for (k = 0; k < MAX_NODES; k++) {
-		connectionDests[k][0] = -1;
+		for (l = 0; l < MAX_OUTGOING_CONNECTIONS; l++) {
+			connectionDests[k][l] = -1;
+		}
 	}
 
 	// O controlador pode receber um argumento que é o caminho de um ficheiro de configuração

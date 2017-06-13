@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
 
 
 		int k;
-		for (k = 0; toPipes[k] != NULL; k++) {
+		for (k = 0; argv[k] != NULL; k++) {
 
 			int nodeToId = (int) strtol(argv[k], (char**) NULL, 10);
 
